@@ -1,0 +1,75 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://font/ui_song.tres" type="DynamicFont" id=1]
+[ext_resource path="res://font/ui_song_big.tres" type="DynamicFont" id=2]
+
+[node name="MainUI" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Title" type="Label" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -407.5
+margin_top = -303.0
+margin_right = 407.5
+margin_bottom = -131.0
+custom_fonts/font = ExtResource( 2 )
+text = "魔王公寓"
+align = 1
+valign = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+margin_left = -407.0
+margin_top = -629.0
+margin_right = 408.0
+margin_bottom = -169.0
+alignment = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="StartButton" type="Button" parent="VBoxContainer"]
+margin_top = 76.0
+margin_right = 815.0
+margin_bottom = 176.0
+rect_min_size = Vector2( 0, 100 )
+focus_mode = 0
+custom_fonts/font = ExtResource( 1 )
+enabled_focus_mode = 0
+text = "开始游戏"
+flat = true
+
+[node name="SettingButton" type="Button" parent="VBoxContainer"]
+margin_top = 180.0
+margin_right = 815.0
+margin_bottom = 280.0
+rect_min_size = Vector2( 0, 100 )
+focus_mode = 0
+custom_fonts/font = ExtResource( 1 )
+enabled_focus_mode = 0
+text = "设置"
+flat = true
+
+[node name="QuitButton" type="Button" parent="VBoxContainer"]
+margin_top = 284.0
+margin_right = 815.0
+margin_bottom = 384.0
+rect_min_size = Vector2( 0, 100 )
+focus_mode = 0
+custom_fonts/font = ExtResource( 1 )
+enabled_focus_mode = 0
+text = "退出游戏"
+flat = true
