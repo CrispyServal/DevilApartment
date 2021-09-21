@@ -9,6 +9,9 @@ function Controller:_ready()
 end
 
 
+function Controller:_pysical_process(delta)
+    print(delta)
+end
 
 
 return Controller
