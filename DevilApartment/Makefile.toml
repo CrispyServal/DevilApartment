@@ -8,5 +8,5 @@ args = ["build", "--release"]
 [tasks.copy_rust_lib]
 script_runner = "@shell"
 script = '''
-cp ./target/release/DevilApartment.dll .
+cp ./target/release/devil_apartment.dll .
 '''
