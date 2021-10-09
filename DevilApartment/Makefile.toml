@@ -1,0 +1,12 @@
+[tasks.rust]
+dependencies = ["rust_build", "copy_rust_lib"]
+
+[tasks.rust_build]
+command = "cargo"
+args = ["build", "--release"]
+
+[tasks.copy_rust_lib]
+script_runner = "@shell"
+script = '''
+cp ./target/release/DevilApartment.dll .
+'''

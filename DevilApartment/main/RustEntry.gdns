@@ -1,0 +1,12 @@
+[gd_resource type="NativeScript" load_steps=2 format=2]
+
+[sub_resource type="GDNativeLibrary" id=1]
+entry/Windows.64 = "res://DevilApartment.dll"
+entry/Windows.32 = "res://DevilApartment.dll"
+dependency/Windows.64 = [  ]
+dependency/Windows.32 = [  ]
+
+[resource]
+resource_name = "RustEntry"
+class_name = "RustEntry"
+library = SubResource( 1 )
