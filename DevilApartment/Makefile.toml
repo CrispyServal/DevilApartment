@@ -1,12 +1,27 @@
 [tasks.rust]
 dependencies = ["rust_build", "copy_rust_lib"]
 
+
+[tasks.rust_dev]
+dependencies = ["rust_build_dev", "copy_rust_lib_dev"]
+
 [tasks.rust_build]
 command = "cargo"
 args = ["build", "--release"]
+
+
+[tasks.rust_build_dev]
+command = "cargo"
+args = ["build"]
 
 [tasks.copy_rust_lib]
 script_runner = "@shell"
 script = '''
 cp ./target/release/devil_apartment.dll .
+'''
+
+[tasks.copy_rust_lib_dev]
+script_runner = "@shell"
+script = '''
+cp ./target/debug/devil_apartment.dll .
 '''

@@ -9,7 +9,6 @@ function Debug:_ready()
 end
 
 function Debug:setup(node_dict)
-    self.map = node_dict.map
     self.root = node_dict.root
 end
 
@@ -18,14 +17,8 @@ function Debug:_input(event)
         local mouse_pos = self.root:get_global_mouse_position()
         local x = mouse_pos.x
         local y = mouse_pos.y
-        local cell = self.map:get_cell(x / TILE_SIZE, y / TILE_SIZE)
-        local id = TileTable:get_id_from_tile_id(cell)
-        if not id then
-            return
-        end
-        local tile_name = TileTable.data[id].name
         self.tile_label:set_text(
-            string.format("(%s,%s):%s", x, y, tile_name)
+            string.format("(%s,%s)", x, y)
         )
     end
 end

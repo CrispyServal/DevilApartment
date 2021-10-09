@@ -1,20 +1,8 @@
 use gdnative::prelude::*;
 
-#[derive(NativeClass)]
-#[inherit(Node)]
-pub struct RustEntry;
+mod rust_entry;
 
-#[methods]
-impl RustEntry {
-    fn new(_owner: &Node) -> Self {
-        RustEntry
-    }
-
-    #[export]
-    fn _ready(&self, _owner: &Node) {
-        godot_print!("Hello, world.");
-    }
-}
+use rust_entry::RustEntry;
 
 fn init(handle: InitHandle) {
     handle.add_class::<RustEntry>();
