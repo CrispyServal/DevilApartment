@@ -10,7 +10,6 @@ local MainScene = {
 require("main/common")
 
 function MainScene:_ready()
-    self.map = self:get_node("Map")
     self.main_ui = self:get_node("CanvasLayer/Control/MainUI")
     self.camera = self:get_node("MainCamera")
 
@@ -21,9 +20,6 @@ end
 
 function MainScene:start_game()
     print("main scene start game")
-
-    self.map:clear_all()
-    self.map:generate_world()
 
     self.main_ui:set_visible(false)
     self:move_camera_to_start()
@@ -38,9 +34,39 @@ end
 
 function MainScene:_setup_debug()
     self:get_node("CanvasLayer/Control/Debug"):setup({
-        map = self.map,
         root = self,
     })
 end
+
+function MainScene:_process(delta)
+    local camera_pos = self.camera:get_position()
+    local offset = delta * 100
+    if Input:is_action_pressed("ui_left") then
+        print("ui left")
+        self.camera:set_position(Vector2(camera_pos.x - offset, camera_pos.y))
+    end
+    camera_pos = self.camera:get_position()
+    if Input:is_action_pressed("ui_right") then
+        print("ui right")
+        self.camera:set_position(Vector2(camera_pos.x + offset, camera_pos.y))
+    end
+    camera_pos = self.camera:get_position()
+    if Input:is_action_pressed("ui_down") then
+        print("ui down")
+        self.camera:set_position(Vector2(camera_pos.x, camera_pos.y + offset))
+    end
+    camera_pos = self.camera:get_position()
+    if Input:is_action_pressed("ui_up") then
+        print("ui up")
+        self.camera:set_position(Vector2(camera_pos.x, camera_pos.y - offset))
+    end
+end
+
+-- function MainScene:_input(event)
+--     if event:is_class("InputEventKey") then
+--         if event:is_pressed() and event:get_scancode() == KEY_ESCAPE then
+--         end
+--     end
+-- end
 
 return MainScene
