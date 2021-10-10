@@ -6,34 +6,49 @@ local MainScene = {
     camera = nil,
 }
 
+local CONNECT_TABLE = {
+    {"dev_ui", "dev_add_pixel", "add_pixel_to_world"},
+}
+
 
 require("main/common")
 
 function MainScene:_ready()
     self.main_ui = self:get_node("CanvasLayer/Control/MainUI")
+    self.dev_ui = self:get_node("CanvasLayer/Control/DevUI")
     self.camera = self:get_node("MainCamera")
+    self.rust_entry = self:get_node("RustEntry")
 
     self.main_ui:connect("start_game", self, "start_game")
 
     self:_setup_debug()
+    self:_setup_devui()
+
+    self:connect_all()
+end
+
+function MainScene:connect_all()
+    for _, t in ipairs(CONNECT_TABLE) do
+        self[t[1]]:connect(t[2], self, t[3])
+    end
 end
 
 function MainScene:start_game()
     print("main scene start game")
 
     self.main_ui:set_visible(false)
-    self:move_camera_to_start()
-end
-
-function MainScene:move_camera_to_start()
-    local x = TILE_SIZE * WORLD_WIDTH / 2
-    local y = TILE_SIZE * WORLD_HEIGHT / 4 * 3
-
-    self.camera:set_position(Vector2(x, y))
+    self.dev_ui:set_visible(true)
 end
 
 function MainScene:_setup_debug()
     self:get_node("CanvasLayer/Control/Debug"):setup({
+        root = self,
+    })
+end
+
+
+function MainScene:_setup_devui()
+    self.dev_ui:setup({
         root = self,
     })
 end
@@ -60,6 +75,19 @@ function MainScene:_process(delta)
         print("ui up")
         self.camera:set_position(Vector2(camera_pos.x, camera_pos.y - offset))
     end
+    if Input:is_action_just_released("ui_zoom_in") then
+        print("ui zoom in")
+        self.camera:set_zoom(self.camera:get_zoom() * 0.75)
+    end
+    if Input:is_action_just_released("ui_zoom_out") then
+        print("ui zoom out")
+        self.camera:set_zoom(self.camera:get_zoom() * 1.25)
+    end
+end
+
+function MainScene:add_pixel_to_world(x, y, p)
+    -- print(string.format("sig: %s, %s", x, y))
+    self.rust_entry:add_pixel(int(x), int(y), int(p))
 end
 
 -- function MainScene:_input(event)

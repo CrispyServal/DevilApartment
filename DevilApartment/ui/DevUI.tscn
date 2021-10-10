@@ -1,0 +1,45 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://ui/DevUI.lua" type="Script" id=1]
+[ext_resource path="res://font/ui_song.tres" type="DynamicFont" id=2]
+[ext_resource path="res://ui/dev_draw_buttons_group.tres" type="ButtonGroup" id=3]
+
+[node name="DevUI" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="GridContainer" type="GridContainer" parent="."]
+margin_left = 1459.0
+margin_top = 138.0
+margin_right = 1884.0
+margin_bottom = 655.0
+columns = 4
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Button0" type="Button" parent="GridContainer"]
+margin_right = 100.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 100, 100 )
+custom_fonts/font = ExtResource( 2 )
+toggle_mode = true
+group = ExtResource( 3 )
+text = "Sand"
+
+[node name="Button1" type="Button" parent="GridContainer"]
+margin_left = 104.0
+margin_right = 204.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 100, 100 )
+custom_fonts/font = ExtResource( 2 )
+toggle_mode = true
+group = ExtResource( 3 )
+text = "Store"
+
+[connection signal="toggled" from="GridContainer/Button0" to="." method="_on_Button0_toggled"]
+[connection signal="toggled" from="GridContainer/Button1" to="." method="_on_Button1_toggled"]

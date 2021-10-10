@@ -22,7 +22,7 @@ margin_top = -303.0
 margin_right = 407.5
 margin_bottom = -131.0
 custom_fonts/font = ExtResource( 2 )
-text = "魔王公寓"
+text = "魔王公寓-研究院"
 align = 1
 valign = 1
 __meta__ = {
@@ -51,7 +51,7 @@ rect_min_size = Vector2( 0, 100 )
 focus_mode = 0
 custom_fonts/font = ExtResource( 1 )
 enabled_focus_mode = 0
-text = "开始游戏"
+text = "开始研究"
 flat = true
 
 [node name="SettingButton" type="Button" parent="VBoxContainer"]
