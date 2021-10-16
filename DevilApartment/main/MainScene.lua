@@ -23,6 +23,7 @@ function MainScene:_ready()
 
     self:_setup_debug()
     self:_setup_devui()
+    self:_setup_camera()
 
     self:connect_all()
 end
@@ -53,36 +54,14 @@ function MainScene:_setup_devui()
     })
 end
 
+function MainScene:_setup_camera()
+    self.camera:setup({
+        root = self,
+        rust_entry = self.rust_entry,
+    })
+end
+
 function MainScene:_process(delta)
-    local camera_pos = self.camera:get_position()
-    local offset = delta * 100
-    if Input:is_action_pressed("ui_left") then
-        print("ui left")
-        self.camera:set_position(Vector2(camera_pos.x - offset, camera_pos.y))
-    end
-    camera_pos = self.camera:get_position()
-    if Input:is_action_pressed("ui_right") then
-        print("ui right")
-        self.camera:set_position(Vector2(camera_pos.x + offset, camera_pos.y))
-    end
-    camera_pos = self.camera:get_position()
-    if Input:is_action_pressed("ui_down") then
-        print("ui down")
-        self.camera:set_position(Vector2(camera_pos.x, camera_pos.y + offset))
-    end
-    camera_pos = self.camera:get_position()
-    if Input:is_action_pressed("ui_up") then
-        print("ui up")
-        self.camera:set_position(Vector2(camera_pos.x, camera_pos.y - offset))
-    end
-    if Input:is_action_just_released("ui_zoom_in") then
-        print("ui zoom in")
-        self.camera:set_zoom(self.camera:get_zoom() * 0.75)
-    end
-    if Input:is_action_just_released("ui_zoom_out") then
-        print("ui zoom out")
-        self.camera:set_zoom(self.camera:get_zoom() * 1.25)
-    end
 end
 
 function MainScene:add_pixel_to_world(x, y, p)
