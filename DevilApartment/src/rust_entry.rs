@@ -53,6 +53,7 @@ pub struct ImageChunk {
 pub struct RustEntry {
     image_grid: Vec<Vec<ImageChunk>>,
     world: World,
+    draw_range: (usize, usize, usize, usize),
 }
 
 #[methods]
@@ -60,9 +61,9 @@ impl RustEntry {
     fn new(_owner: &Node2D) -> Self {
         let num_of_image_1d = WORLD_SIZE / IMAGE_SIZE;
         let mut image_grid = Vec::with_capacity(num_of_image_1d);
-        for y in 0..num_of_image_1d {
+        for _ in 0..num_of_image_1d {
             let mut image_row = Vec::with_capacity(num_of_image_1d);
-            for x in 0..num_of_image_1d {
+            for _ in 0..num_of_image_1d {
                 let image = Image::new();
                 image.create(
                     IMAGE_SIZE as i64,
@@ -91,6 +92,7 @@ impl RustEntry {
         Self {
             image_grid,
             world: World::new_empty(),
+            draw_range: (0, 0, 0, 0),
         }
     }
 
@@ -116,15 +118,36 @@ impl RustEntry {
     }
 
     #[export]
-    fn add_pixel(&mut self, _owner: &Node2D, x: usize, y: usize, p: u8) {
+    pub fn add_pixel(&mut self, _owner: &Node2D, x: usize, y: usize, p: u8) {
         self.world.set(x, y, p);
+        self.draw_range.0 = self.draw_range.0.min(x / IMAGE_SIZE);
+        self.draw_range.1 = self.draw_range.1.max(x / IMAGE_SIZE + 1);
+        self.draw_range.2 = self.draw_range.2.min(y / IMAGE_SIZE);
+        self.draw_range.3 = self.draw_range.3.max(y / IMAGE_SIZE + 1);
+    }
+
+    #[export]
+    pub fn update_camera_rect(&mut self, _owner: &Node2D, camera_rect: Rect2) {
+        let min_chunk_x = (camera_rect.origin.x.max(0.) as usize) / IMAGE_SIZE;
+        let min_chunk_y = (camera_rect.origin.y.max(0.) as usize) / IMAGE_SIZE;
+        let max_chunk_x = (((camera_rect.origin.x + camera_rect.size.width) as usize) / IMAGE_SIZE
+            + 1)
+        .min(WORLD_SIZE / IMAGE_SIZE);
+        let max_chunk_y =
+            (((camera_rect.origin.y + camera_rect.size.height) as usize) / IMAGE_SIZE + 1)
+                .min(WORLD_SIZE / IMAGE_SIZE);
+        self.draw_range = (min_chunk_x, max_chunk_x, min_chunk_y, max_chunk_y);
+        println!("{:?} -> {:?}", camera_rect, self.draw_range);
     }
 
     // 目前只draw第0行0的chunk
     fn draw(&mut self, owner: &Node2D) {
+        if self.draw_range.1 - self.draw_range.0 > 3 || self.draw_range.3 - self.draw_range.2 > 3 {
+            return;
+        }
         unsafe {
-            for chunk_y in 0..2 {
-                for chunk_x in 0..3 {
+            for chunk_y in self.draw_range.2..self.draw_range.3 {
+                for chunk_x in self.draw_range.0..self.draw_range.1 {
                     let world_image = self.image_grid[chunk_y][chunk_x].image.assume_safe();
                     world_image.lock();
                     for y in 0usize..IMAGE_SIZE {
@@ -132,7 +155,9 @@ impl RustEntry {
                             world_image.set_pixel(
                                 x as i64,
                                 y as i64,
-                                self.world.fetch(x + chunk_x * IMAGE_SIZE, y + chunk_y * IMAGE_SIZE).to_color(),
+                                self.world
+                                    .fetch(x + chunk_x * IMAGE_SIZE, y + chunk_y * IMAGE_SIZE)
+                                    .to_color(),
                             );
                         }
                     }
