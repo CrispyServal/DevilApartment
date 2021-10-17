@@ -3,6 +3,11 @@ use gdnative::prelude::*;
 
 const WORLD_SIZE: usize = 16384usize;
 const IMAGE_SIZE: usize = 256usize;
+const IMAGE_CHUNK_COUNT: usize = WORLD_SIZE / IMAGE_SIZE;
+const LOGIC_CHUNK_SIZE: usize = 64usize;
+const LOGIC_CHUNK_COUNT: usize = WORLD_SIZE / LOGIC_CHUNK_SIZE;
+
+const SIMULATE_DELTA: f64 = 1. / 30.;
 
 pub type PixelId = u8;
 
@@ -21,15 +26,22 @@ impl Pixel {
     }
 }
 
+#[derive(Default, Clone, Copy)]
+struct ChunkStatus {
+    active: bool,
+    active_next_frame: bool,
+}
+
 pub struct World {
-    // world: [[Pixel; WORLD_SIZE]; WORLD_SIZE],
     world: Vec<Vec<Pixel>>,
+    chunk_status: Vec<Vec<ChunkStatus>>,
 }
 
 impl World {
     pub fn new_empty() -> Self {
         Self {
             world: vec![vec![Pixel::default(); WORLD_SIZE]; WORLD_SIZE],
+            chunk_status: vec![vec![ChunkStatus::default(); LOGIC_CHUNK_COUNT]; LOGIC_CHUNK_COUNT],
         }
     }
 
@@ -39,6 +51,54 @@ impl World {
 
     pub fn set(&mut self, x: usize, y: usize, pid: PixelId) {
         self.world[y][x].id = pid;
+    }
+
+    pub fn active_by_world(&mut self, cx: usize, cy: usize) {
+        self.chunk_status[cy][cx].active_next_frame = true;
+    }
+
+    pub fn simulate_falling(&mut self) {
+        self.setup_active();
+        self.simulate_falling_for_active_chunks();
+    }
+
+    fn setup_active(&mut self) {
+        for crow in self.chunk_status.iter_mut() {
+            for chunk in crow.iter_mut() {
+                chunk.active = chunk.active_next_frame;
+                chunk.active_next_frame = false;
+            }
+        }
+    }
+
+    fn simulate_falling_for_active_chunks(&mut self) {
+        let mut to_update = vec![];
+        for (cy, crow) in self.chunk_status.iter().enumerate().rev() {
+            for (cx, chunk) in crow.iter().enumerate() {
+                if chunk.active {
+                    to_update.push((cx, cy));
+                }
+            }
+        }
+        for (cx, cy) in to_update.iter() {
+            self.simulate_falling_for_chunk(*cx, *cy);
+        }
+    }
+
+    fn simulate_falling_for_chunk(&mut self, cx: usize, cy: usize) {
+        for y in (cy * LOGIC_CHUNK_SIZE..(cy + 1) * LOGIC_CHUNK_SIZE).rev() {
+            for x in cx * LOGIC_CHUNK_SIZE..(cx + 1) * LOGIC_CHUNK_SIZE {
+                let p = self.world[y][x];
+                if y + 1 < WORLD_SIZE && p.id == 1 {
+                    if self.world[y + 1][x].id == 0 {
+                        self.world[y + 1][x].id = p.id;
+                        self.world[y][x].id = 0;
+                        self.chunk_status[(y + 1) / LOGIC_CHUNK_SIZE][cx].active_next_frame = true;
+                        self.chunk_status[y / LOGIC_CHUNK_SIZE][cx].active_next_frame = true;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -50,20 +110,52 @@ pub struct ImageChunk {
 
 #[derive(NativeClass)]
 #[inherit(Node2D)]
+#[register_with(Self::register_signals)]
 pub struct RustEntry {
-    image_grid: Vec<Vec<ImageChunk>>,
+    image_grid: Option<Vec<Vec<ImageChunk>>>,
     world: World,
     draw_range: (usize, usize, usize, usize),
+    #[property]
+    chunk_scene: Option<Ref<PackedScene>>,
 }
 
 #[methods]
 impl RustEntry {
     fn new(_owner: &Node2D) -> Self {
-        let num_of_image_1d = WORLD_SIZE / IMAGE_SIZE;
-        let mut image_grid = Vec::with_capacity(num_of_image_1d);
-        for _ in 0..num_of_image_1d {
-            let mut image_row = Vec::with_capacity(num_of_image_1d);
-            for _ in 0..num_of_image_1d {
+        Self {
+            image_grid: None,
+            world: World::new_empty(),
+            draw_range: (0, 0, 0, 0),
+            chunk_scene: None,
+        }
+    }
+
+    fn register_signals(builder: &ClassBuilder<Self>) {
+        builder.add_signal(Signal {
+            name: "debug",
+            args: &[
+                SignalArgument {
+                    name: "cx",
+                    default: Variant::from_i64(100),
+                    export_info: ExportInfo::new(VariantType::I64),
+                    usage: PropertyUsage::DEFAULT,
+                },
+                SignalArgument {
+                    name: "cy",
+                    default: Variant::from_i64(100),
+                    export_info: ExportInfo::new(VariantType::I64),
+                    usage: PropertyUsage::DEFAULT,
+                },
+            ],
+        });
+    }
+    #[export]
+    fn _ready(&mut self, owner: &Node2D) {
+        godot_print!("Hello, RustEntry.");
+        let mut image_grid = Vec::with_capacity(IMAGE_CHUNK_COUNT);
+        for chunk_y in 0..IMAGE_CHUNK_COUNT {
+            let mut image_row = Vec::with_capacity(IMAGE_CHUNK_COUNT);
+            for chunk_x in 0..IMAGE_CHUNK_COUNT {
                 let image = Image::new();
                 image.create(
                     IMAGE_SIZE as i64,
@@ -78,38 +170,27 @@ impl RustEntry {
                     Image::FORMAT_RGB8,
                     ImageTexture::STORAGE_RAW,
                 );
-                let sprite = Sprite::new();
+                let sprite = instance_scene::<Sprite>(unsafe {
+                    &self.chunk_scene.as_ref().unwrap().assume_safe()
+                });
+                sprite.set_position(Vector2::new(
+                    (chunk_x as f32 + 0.5) * (IMAGE_SIZE as f32),
+                    (chunk_y as f32 + 0.5) * (IMAGE_SIZE as f32),
+                ));
+                let shared_sprite = sprite.into_shared();
                 let chunk = ImageChunk {
                     image: image.into_shared(),
                     texture: texture.into_shared(),
-                    sprite: sprite.into_shared(),
+                    sprite: shared_sprite,
                 };
+                let sprite_ref = unsafe { shared_sprite.assume_safe() };
+                owner.add_child(sprite_ref, false);
                 image_row.push(chunk);
             }
             image_grid.push(image_row);
         }
 
-        Self {
-            image_grid,
-            world: World::new_empty(),
-            draw_range: (0, 0, 0, 0),
-        }
-    }
-
-    #[export]
-    fn _ready(&mut self, owner: &Node2D) {
-        godot_print!("Hello, RustEntry.");
-        let num_of_image_1d = WORLD_SIZE / IMAGE_SIZE;
-        for chunk_y in 0..num_of_image_1d {
-            for chunk_x in 0..num_of_image_1d {
-                let sprite = unsafe { self.image_grid[chunk_y][chunk_x].sprite.assume_safe() };
-                sprite.set_position(Vector2::new(
-                    (chunk_x as f32 + 0.5) * (IMAGE_SIZE as f32),
-                    (chunk_y as f32 + 0.5) * (IMAGE_SIZE as f32),
-                ));
-                owner.add_child(sprite, false);
-            }
-        }
+        self.image_grid.replace(image_grid);
     }
 
     #[export]
@@ -118,12 +199,41 @@ impl RustEntry {
     }
 
     #[export]
-    pub fn add_pixel(&mut self, _owner: &Node2D, x: usize, y: usize, p: u8) {
+    fn _physics_process(&mut self, owner: &Node2D, delta: f64) {
+        self.collect_active_chunk_for_debug_draw(owner);
+        self.simulate();
+    }
+
+    fn simulate(&mut self) {
+        self.world.simulate_falling();
+    }
+
+    fn active_by_world(&mut self, owner: &Node2D, cx: usize, cy: usize) {
+        self.world.active_by_world(cx, cy);
+    }
+
+    fn collect_active_chunk_for_debug_draw(&self, owner: &Node2D) {
+        for (cy, crow) in self.world.chunk_status.iter().enumerate() {
+            for (cx, chunk) in crow.iter().enumerate() {
+                if chunk.active {
+                    owner.emit_signal(
+                        "debug",
+                        &[Variant::from_i64(cx as i64), Variant::from_i64(cy as i64)],
+                    );
+                }
+            }
+        }
+    }
+
+    #[export]
+    pub fn add_pixel(&mut self, owner: &Node2D, x: usize, y: usize, p: u8) {
         self.world.set(x, y, p);
+        // active draw
         self.draw_range.0 = self.draw_range.0.min(x / IMAGE_SIZE);
         self.draw_range.1 = self.draw_range.1.max(x / IMAGE_SIZE + 1);
         self.draw_range.2 = self.draw_range.2.min(y / IMAGE_SIZE);
         self.draw_range.3 = self.draw_range.3.max(y / IMAGE_SIZE + 1);
+        self.active_by_world(owner, x / LOGIC_CHUNK_SIZE, y / LOGIC_CHUNK_SIZE);
     }
 
     #[export]
@@ -132,10 +242,10 @@ impl RustEntry {
         let min_chunk_y = (camera_rect.origin.y.max(0.) as usize) / IMAGE_SIZE;
         let max_chunk_x = (((camera_rect.origin.x + camera_rect.size.width) as usize) / IMAGE_SIZE
             + 1)
-        .min(WORLD_SIZE / IMAGE_SIZE);
+        .min(IMAGE_CHUNK_COUNT);
         let max_chunk_y =
             (((camera_rect.origin.y + camera_rect.size.height) as usize) / IMAGE_SIZE + 1)
-                .min(WORLD_SIZE / IMAGE_SIZE);
+                .min(IMAGE_CHUNK_COUNT);
         self.draw_range = (min_chunk_x, max_chunk_x, min_chunk_y, max_chunk_y);
         println!("{:?} -> {:?}", camera_rect, self.draw_range);
     }
@@ -148,7 +258,9 @@ impl RustEntry {
         unsafe {
             for chunk_y in self.draw_range.2..self.draw_range.3 {
                 for chunk_x in self.draw_range.0..self.draw_range.1 {
-                    let world_image = self.image_grid[chunk_y][chunk_x].image.assume_safe();
+                    let world_image = self.image_grid.as_ref().unwrap()[chunk_y][chunk_x]
+                        .image
+                        .assume_safe();
                     world_image.lock();
                     for y in 0usize..IMAGE_SIZE {
                         for x in 0usize..IMAGE_SIZE {
@@ -162,12 +274,28 @@ impl RustEntry {
                         }
                     }
                     world_image.unlock();
-                    let world_texture = self.image_grid[chunk_y][chunk_x].texture.assume_safe();
+                    let world_texture = self.image_grid.as_ref().unwrap()[chunk_y][chunk_x]
+                        .texture
+                        .assume_safe();
                     world_texture.set_data(world_image);
-                    let sprite = self.image_grid[chunk_y][chunk_x].sprite.assume_safe();
+                    let sprite = self.image_grid.as_ref().unwrap()[chunk_y][chunk_x]
+                        .sprite
+                        .assume_safe();
                     sprite.set_texture(world_texture);
                 }
             }
         }
     }
+}
+
+fn instance_scene<Root>(scene: &PackedScene) -> Ref<Root, Unique>
+where
+    Root: gdnative::object::GodotObject<RefKind = ManuallyManaged> + SubClass<Node>,
+{
+    let instance = scene
+        .instance(PackedScene::GEN_EDIT_STATE_DISABLED)
+        .unwrap();
+    let instance = unsafe { instance.assume_unique() };
+
+    instance.try_cast::<Root>().unwrap()
 }

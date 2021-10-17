@@ -1,9 +1,11 @@
-[gd_scene load_steps=8 format=2]
+[gd_scene load_steps=10 format=2]
 
 [ext_resource path="res://main/MainCamera.lua" type="Script" id=1]
 [ext_resource path="res://ui/DevUI.tscn" type="PackedScene" id=2]
+[ext_resource path="res://main/ImageChunk.tscn" type="PackedScene" id=3]
 [ext_resource path="res://font/ui_song.tres" type="DynamicFont" id=4]
 [ext_resource path="res://ui/MainUI.tscn" type="PackedScene" id=5]
+[ext_resource path="res://main/DebugDraw.lua" type="Script" id=6]
 [ext_resource path="res://main/MainScene.lua" type="Script" id=7]
 [ext_resource path="res://main/Debug.lua" type="Script" id=8]
 [ext_resource path="res://main/RustEntry.gdns" type="Script" id=9]
@@ -32,6 +34,11 @@ __meta__ = {
 
 [node name="RustEntry" type="Node2D" parent="."]
 script = ExtResource( 9 )
+chunk_scene = ExtResource( 3 )
+
+[node name="DebugDraw" type="Node2D" parent="."]
+script = ExtResource( 6 )
+enabled = false
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
@@ -69,3 +76,5 @@ margin_bottom = 204.0
 rect_min_size = Vector2( 0, 100 )
 custom_fonts/font = ExtResource( 4 )
 text = "0.0"
+
+[connection signal="debug" from="RustEntry" to="DebugDraw" method="_on_RustEntry_debug"]
