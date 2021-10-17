@@ -26,9 +26,24 @@ pub const fn pixel_behavior(pid: PixelId) -> Behavior {
 
 pub const fn pixel_color(pid: PixelId) -> Color {
     match pid {
-        1 => Color { r: 1.0, g: 1.0, b: 0.0, a: 1.0},
-        2 => Color { r: 0.3, g: 0.3, b: 0.3, a: 1.0},
-        _ => Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0},
+        1 => Color {
+            r: 1.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        2 => Color {
+            r: 0.3,
+            g: 0.3,
+            b: 0.3,
+            a: 1.0,
+        },
+        _ => Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.0,
+        },
     }
 }
 
@@ -40,10 +55,7 @@ pub struct Pixel {
 
 impl Default for Pixel {
     fn default() -> Self {
-        Self {
-            id: 0,
-            behavior: 0,
-        }
+        Self { id: 0, behavior: 0 }
     }
 }
 
