@@ -19,6 +19,10 @@ function DevUI:_on_Button1_toggled(button_pressed)
 end
 
 function DevUI:_process(delta)
+    if self.is_drawing then
+        local mouse_pos = self.root:get_global_mouse_position()
+        self:emit_signal("dev_add_pixel", mouse_pos.x, mouse_pos.y, self.selected_pixel_type)
+    end
 end
 
 function DevUI:_input(event)
