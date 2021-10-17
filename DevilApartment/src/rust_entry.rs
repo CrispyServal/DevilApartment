@@ -7,22 +7,49 @@ const IMAGE_CHUNK_COUNT: usize = WORLD_SIZE / IMAGE_SIZE;
 const LOGIC_CHUNK_SIZE: usize = 64usize;
 const LOGIC_CHUNK_COUNT: usize = WORLD_SIZE / LOGIC_CHUNK_SIZE;
 
-const SIMULATE_DELTA: f64 = 1. / 30.;
+const POS_BEHAVIOR_DRAW: usize = 0;
+const POS_BEHAVIOR_FALL: usize = 1;
+const BEHAVIOR_DRAW: u8 = 1 << POS_BEHAVIOR_DRAW;
+const BEHAVIOR_FALL: u8 = 1 << POS_BEHAVIOR_FALL;
 
 pub type PixelId = u8;
+pub type Behavior = u8;
 
-#[derive(Default, Clone, Copy)]
+pub const fn pixel_behavior(pid: PixelId) -> Behavior {
+    match pid {
+        0 => 0,
+        1 => BEHAVIOR_DRAW | BEHAVIOR_FALL,
+        2 => BEHAVIOR_DRAW,
+        _ => 0,
+    }
+}
+
+pub const fn pixel_color(pid: PixelId) -> Color {
+    match pid {
+        1 => Color { r: 1.0, g: 1.0, b: 0.0, a: 1.0},
+        2 => Color { r: 0.3, g: 0.3, b: 0.3, a: 1.0},
+        _ => Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0},
+    }
+}
+
+#[derive(Clone, Copy)]
 pub struct Pixel {
     id: PixelId,
+    behavior: Behavior,
+}
+
+impl Default for Pixel {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            behavior: 0,
+        }
+    }
 }
 
 impl Pixel {
     pub fn to_color(&self) -> Color {
-        match self.id {
-            0 => Color::rgb(0., 0., 0.),
-            1 => Color::rgb(1., 1., 0.),
-            _ => Color::rgb(0.3, 0.3, 0.3),
-        }
+        pixel_color(self.id)
     }
 }
 
@@ -50,7 +77,9 @@ impl World {
     }
 
     pub fn set(&mut self, x: usize, y: usize, pid: PixelId) {
-        self.world[y][x].id = pid;
+        let p = &mut self.world[y][x];
+        p.id = pid;
+        p.behavior = pixel_behavior(pid);
     }
 
     pub fn active_by_world(&mut self, cx: usize, cy: usize) {
@@ -89,10 +118,13 @@ impl World {
         for y in (cy * LOGIC_CHUNK_SIZE..(cy + 1) * LOGIC_CHUNK_SIZE).rev() {
             for x in cx * LOGIC_CHUNK_SIZE..(cx + 1) * LOGIC_CHUNK_SIZE {
                 let p = self.world[y][x];
-                if y + 1 < WORLD_SIZE && p.id == 1 {
-                    if self.world[y + 1][x].id == 0 {
-                        self.world[y + 1][x].id = p.id;
-                        self.world[y][x].id = 0;
+                if y + 1 < WORLD_SIZE && (p.behavior & BEHAVIOR_FALL != 0) {
+                    if self.world[y + 1][x].behavior & BEHAVIOR_DRAW == 0 {
+                        unsafe {
+                            let pa: *mut Pixel = &mut self.world[y][x];
+                            let pb: *mut Pixel = &mut self.world[y + 1][x];
+                            std::ptr::swap(pa, pb);
+                        }
                         self.chunk_status[(y + 1) / LOGIC_CHUNK_SIZE][cx].active_next_frame = true;
                         self.chunk_status[y / LOGIC_CHUNK_SIZE][cx].active_next_frame = true;
                     }
@@ -161,13 +193,13 @@ impl RustEntry {
                     IMAGE_SIZE as i64,
                     IMAGE_SIZE as i64,
                     false,
-                    Image::FORMAT_RGB8,
+                    Image::FORMAT_RGBA8,
                 );
                 let texture = ImageTexture::new();
                 texture.create(
                     IMAGE_SIZE as i64,
                     IMAGE_SIZE as i64,
-                    Image::FORMAT_RGB8,
+                    Image::FORMAT_RGBA8,
                     ImageTexture::STORAGE_RAW,
                 );
                 let sprite = instance_scene::<Sprite>(unsafe {
@@ -226,8 +258,8 @@ impl RustEntry {
     }
 
     #[export]
-    pub fn add_pixel(&mut self, owner: &Node2D, x: usize, y: usize, p: u8) {
-        self.world.set(x, y, p);
+    pub fn add_pixel(&mut self, owner: &Node2D, x: usize, y: usize, pid: u8) {
+        self.world.set(x, y, pid);
         // active draw
         self.draw_range.0 = self.draw_range.0.min(x / IMAGE_SIZE);
         self.draw_range.1 = self.draw_range.1.max(x / IMAGE_SIZE + 1);
