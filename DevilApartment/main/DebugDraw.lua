@@ -14,7 +14,7 @@ function DebugDraw:_draw()
         local cy = to_draw_chunk[2]
         local rect = Rect2(Vector2(cx * 64, cy * 64), Vector2(64, 64))
         self:draw_rect(rect, Color(1.0, 0, 0), false)
-        -- print(string.format("draw rect %s", rect))
+        print(string.format("draw rect %s", rect))
     end
     self.to_draw = {}
     self.update_next = true

@@ -1,4 +1,4 @@
-use gdnative::api::ImageTexture;
+use gdnative::api::{ImageTexture, ShaderMaterial};
 use gdnative::prelude::*;
 
 const WORLD_SIZE: usize = 16384usize;
@@ -24,38 +24,29 @@ pub const fn pixel_behavior(pid: PixelId) -> Behavior {
     }
 }
 
-pub const fn pixel_color(pid: PixelId) -> Color {
-    match pid {
-        1 => Color {
-            r: 1.0,
-            g: 1.0,
-            b: 0.0,
-            a: 1.0,
-        },
-        2 => Color {
-            r: 0.3,
-            g: 0.3,
-            b: 0.3,
-            a: 1.0,
-        },
-        _ => Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.0,
-        },
+fn id_to_color(pid: PixelId) -> Color {
+    Color {
+        r: (pid as f32) / 255.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
     }
+}
+
+pub fn pixel_color(pid: PixelId) -> Color {
+    id_to_color(pid)
 }
 
 #[derive(Clone, Copy)]
 pub struct Pixel {
     id: PixelId,
     behavior: Behavior,
+    horizontal_move: u8,
 }
 
 impl Default for Pixel {
     fn default() -> Self {
-        Self { id: 0, behavior: 0 }
+        Self { id: 0, behavior: 0, horizontal_move: 0 }
     }
 }
 
@@ -149,7 +140,7 @@ impl World {
 pub struct ImageChunk {
     image: Ref<Image>,
     texture: Ref<ImageTexture>,
-    sprite: Ref<Sprite>,
+    draw_item: Ref<Sprite>,
 }
 
 #[derive(NativeClass)]
@@ -193,6 +184,7 @@ impl RustEntry {
             ],
         });
     }
+
     #[export]
     fn _ready(&mut self, owner: &Node2D) {
         godot_print!("Hello, RustEntry.");
@@ -205,30 +197,30 @@ impl RustEntry {
                     IMAGE_SIZE as i64,
                     IMAGE_SIZE as i64,
                     false,
-                    Image::FORMAT_RGBA8,
+                    Image::FORMAT_R8,
                 );
                 let texture = ImageTexture::new();
                 texture.create(
                     IMAGE_SIZE as i64,
                     IMAGE_SIZE as i64,
-                    Image::FORMAT_RGBA8,
+                    Image::FORMAT_R8,
                     ImageTexture::STORAGE_RAW,
                 );
-                let sprite = instance_scene::<Sprite>(unsafe {
+                let node = instance_scene::<Sprite>(unsafe {
                     &self.chunk_scene.as_ref().unwrap().assume_safe()
                 });
-                sprite.set_position(Vector2::new(
+                node.set_position(Vector2::new(
                     (chunk_x as f32 + 0.5) * (IMAGE_SIZE as f32),
                     (chunk_y as f32 + 0.5) * (IMAGE_SIZE as f32),
                 ));
-                let shared_sprite = sprite.into_shared();
+                let shared_node = node.into_shared();
                 let chunk = ImageChunk {
                     image: image.into_shared(),
                     texture: texture.into_shared(),
-                    sprite: shared_sprite,
+                    draw_item: shared_node,
                 };
-                let sprite_ref = unsafe { shared_sprite.assume_safe() };
-                owner.add_child(sprite_ref, false);
+                let node_ref = unsafe { shared_node.assume_safe() };
+                owner.add_child(node_ref, false);
                 image_row.push(chunk);
             }
             image_grid.push(image_row);
@@ -322,10 +314,12 @@ impl RustEntry {
                         .texture
                         .assume_safe();
                     world_texture.set_data(world_image);
-                    let sprite = self.image_grid.as_ref().unwrap()[chunk_y][chunk_x]
-                        .sprite
+                    let item = self.image_grid.as_ref().unwrap()[chunk_y][chunk_x]
+                        .draw_item
                         .assume_safe();
-                    sprite.set_texture(world_texture);
+                    //item.set_texture(world_texture);
+                    let material: Ref<ShaderMaterial> = item.material().unwrap().cast().unwrap();
+                    material.assume_safe().set_shader_param("my_texture", world_texture);
                 }
             }
         }
