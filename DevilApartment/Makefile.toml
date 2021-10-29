@@ -1,6 +1,9 @@
 [tasks.rust]
 dependencies = ["rust_build", "copy_rust_lib"]
 
+[tasks.run]
+command = "godot"
+
 
 [tasks.rust_dev]
 dependencies = ["rust_build_dev", "copy_rust_lib_dev"]

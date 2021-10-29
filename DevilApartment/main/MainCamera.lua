@@ -36,7 +36,11 @@ function MainCamera:_process(delta)
         rect_changed = true
     end
     if Input:is_action_just_released("ui_zoom_in") then
-        self:set_zoom(zoom * 0.75)
+        zoom = zoom * 0.75
+        if zoom < 0.01 then
+            zoom = 0.01
+        end
+        self:set_zoom(zoom)
         rect_changed = true
     end
     if Input:is_action_just_released("ui_zoom_out") then
