@@ -17,6 +17,7 @@ function MainScene:_ready()
     self.main_ui = self:get_node("CanvasLayer/Control/MainUI")
     self.dev_ui = self:get_node("CanvasLayer/Control/DevUI")
     self.camera = self:get_node("MainCamera")
+    self.falling_sand = self:get_node("FallingSand")
 
     self.main_ui:connect("start_game", self, "start_game")
 

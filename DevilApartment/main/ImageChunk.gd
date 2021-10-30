@@ -5,8 +5,8 @@ extends Sprite
 # var a = 2
 # var b = "text"
 
-var image
-var image_texture
+var image: Image
+var image_texture: ImageTexture
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -15,22 +15,28 @@ func _ready():
     
     image_texture = ImageTexture.new()
     image_texture.create(256, 256, Image.FORMAT_R8, ImageTexture.STORAGE_RAW)
-    update_image()
+    #debug()
     
-
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-    #update_image()
-    pass
     
-func update_image():
+func debug():
+    var HalfChunk = load("res://main/fallingsand/HalfChunk.gd")
+    var half_chunk: HalfChunk = HalfChunk.new()
+    half_chunk.init(32, 0, 0)
+    update_image(half_chunk, 0, 0)
+    
+func update_image(half_chunk, start_x, start_y):
+    print("update image for (%d, %d), start: (%d, %d)" % [half_chunk.row, half_chunk.col, start_x, start_y])
     image.lock()
-    for y in range(0, 256):
-        for x in range(0, 256):
-            var pixel: int = randi() % 3
-            image.set_pixel(x, y, Color8(1, 0, 0))
+    var buffer = half_chunk.get_buffer()
+    for y in range(half_chunk.get_size()):
+        for x in range(half_chunk.get_size()):
+            var pixel: int = buffer[y][x]
+            #print("(%d, %d) -> %d" % [x, y, pixel])
+            image.set_pixel(start_x + x, start_y + y, Color8(pixel, 0, 0))
     image.unlock()
+    #image.save_png("res://debug_output/texture.png")
     image_texture.set_data(image)
     
-    material.set_shader_param("my_texture", image_texture)
+    var mat: ShaderMaterial = material
+    mat.set_shader_param("my_texture", image_texture)
     #set_texture(image_texture)

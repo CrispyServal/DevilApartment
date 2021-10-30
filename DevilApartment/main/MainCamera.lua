@@ -1,6 +1,8 @@
 local MainCamera = {
     extends = "Camera2D",
     view_rect = nil,
+
+    update_camera_rect = signal("rect"),
 }
 
 function MainCamera:setup(node_dict)
@@ -60,7 +62,8 @@ function MainCamera:calculate_rect()
         min_pos,
         view_size
     )
-    --self.rust_entry:update_camera_rect(self.view_rect)
+
+    self:emit_signal("update_camera_rect", self.view_rect)
 end
 
 function MainCamera:get_view_rect()
