@@ -6,7 +6,6 @@ local MainCamera = {
 function MainCamera:setup(node_dict)
     print("im camera setup")
     print_r(node_dict)
-    self.rust_entry = node_dict.rust_entry
 end
 
 -- 所有的相机控制得在这
@@ -61,7 +60,7 @@ function MainCamera:calculate_rect()
         min_pos,
         view_size
     )
-    self.rust_entry:update_camera_rect(self.view_rect)
+    --self.rust_entry:update_camera_rect(self.view_rect)
 end
 
 function MainCamera:get_view_rect()

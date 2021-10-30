@@ -17,7 +17,6 @@ function MainScene:_ready()
     self.main_ui = self:get_node("CanvasLayer/Control/MainUI")
     self.dev_ui = self:get_node("CanvasLayer/Control/DevUI")
     self.camera = self:get_node("MainCamera")
-    self.rust_entry = self:get_node("RustEntry")
 
     self.main_ui:connect("start_game", self, "start_game")
 
@@ -57,7 +56,6 @@ end
 function MainScene:_setup_camera()
     self.camera:setup({
         root = self,
-        rust_entry = self.rust_entry,
     })
 end
 
@@ -66,7 +64,6 @@ end
 
 function MainScene:add_pixel_to_world(x, y, p)
     -- print(string.format("sig: %s, %s", x, y))
-    self.rust_entry:add_pixel(int(x), int(y), int(p))
 end
 
 -- function MainScene:_input(event)
