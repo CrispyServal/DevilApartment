@@ -43,6 +43,7 @@ impl PixelWorld {
 
     #[export]
     pub fn user_set_pixel(&self, _owner: &Reference, world_x: usize, world_y: usize, id: u8) {
+        //godot_print!("add pixel: {}, {}: {}", world_x, world_y, id);
         self.world_buffer
             .set_pixel(world_x, world_y, Pixel::from_id(id))
     }

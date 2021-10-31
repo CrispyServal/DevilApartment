@@ -15,9 +15,9 @@ const CHUNK_PER_TEXTURE = TEXTURE_SIZE / CHUNK_SIZE
 # Called when the node enters the scene tree for the first time.
 func _ready():
     assert(TEXTURE_SIZE >= HALF_CHUNK_SIZE)
-    init_thread_pool(THREAD_COUNT)
     init_world()
     init_textures()
+    init_image_updater()
     
 func _physics_process(_delta):
     # print("tick")
@@ -37,9 +37,14 @@ func init_thread_pool(n: int):
     
 var pixel_world
 func init_world():
-    var PixelWorldClass  = load("res://main/fallingsand_native/PixelWorld.gdns")
-    pixel_world = PixelWorldClass.new()
-            
+    var Class  = load("res://main/fallingsand_native/PixelWorld.gdns")
+    pixel_world = Class.new()
+          
+var image_updater
+func init_image_updater():
+    var Class  = load("res://main/fallingsand_native/ImageUpdater.gdns")
+    image_updater = Class.new()
+    
 func tick_simulate():
     handle_debug_input()
     pixel_world.pre_simulate()
@@ -63,34 +68,32 @@ func init_textures():
             add_child(t)
             texture_row_array[x] = t
 
-# 贴图层面
-var visible_row_min: int = 0
-var visible_row_max: int = 1
-var visible_col_min: int = 0
-var visible_col_max: int = 1
+
 func _on_MainCamera_update_camera_rect(rect: Rect2):
-    visible_row_min = int(rect.position.y / TEXTURE_SIZE)
-    visible_col_min = int(rect.position.x / TEXTURE_SIZE)
-    visible_row_max = int((rect.position.y + rect.size.y) / TEXTURE_SIZE) + 1
-    visible_col_max = int((rect.position.x + rect.size.x) / TEXTURE_SIZE) + 1
+    var visible_row_min = int(rect.position.y / TEXTURE_SIZE)
+    var visible_col_min = int(rect.position.x / TEXTURE_SIZE)
+    var visible_row_max = int((rect.position.y + rect.size.y) / TEXTURE_SIZE) + 1
+    var visible_col_max = int((rect.position.x + rect.size.x) / TEXTURE_SIZE) + 1
+    image_updater.update_visible_range(visible_col_min, visible_col_max, visible_row_min, visible_row_max)
     #prints("rect: ", visible_row_min, visible_row_max, visible_col_min, visible_col_max)
 
 func draw_all():
-    for y in range(visible_row_min, visible_row_max):
-        for x in range(visible_col_min, visible_col_max):
-            if y < 0 or y >= texture_grid.size():
-                return
-            var texture_row_array = texture_grid[y]
-            if x < 0 or x >= texture_row_array.size():
-                return
-            var t = texture_row_array[x]
-            var world_x = x * TEXTURE_SIZE
-            var world_y = y * TEXTURE_SIZE
-            for yy in range(CHUNK_PER_TEXTURE):
-                for xx in range(CHUNK_PER_TEXTURE):
-                    pass
-                    if pixel_world.is_chunk_active(x * CHUNK_PER_TEXTURE + xx, y * CHUNK_PER_TEXTURE + yy):
-                        t.update_image(pixel_world, world_x, world_y, xx * CHUNK_SIZE, yy * CHUNK_SIZE)
+    image_updater.draw_all(pixel_world, texture_grid)
+    #for y in range(visible_row_min, visible_row_max):
+     #   for x in range(visible_col_min, visible_col_max):
+      #      if y < 0 or y >= texture_grid.size():
+       #         return
+        #    var texture_row_array = texture_grid[y]
+         #   if x < 0 or x >= texture_row_array.size():
+          #      return
+           # var t = texture_row_array[x]
+            #var world_x = x * TEXTURE_SIZE
+            #var world_y = y * TEXTURE_SIZE
+            #for yy in range(CHUNK_PER_TEXTURE):
+            #    for xx in range(CHUNK_PER_TEXTURE):
+             #       pass
+              #      if pixel_world.is_chunk_active(x * CHUNK_PER_TEXTURE + xx, y * CHUNK_PER_TEXTURE + yy):
+               #         t.update_image(pixel_world, world_x, world_y, xx * CHUNK_SIZE, yy * CHUNK_SIZE)
 
 var add_queue: Array = []
 func _on_DevUI_dev_add_pixel(x, y, p):
