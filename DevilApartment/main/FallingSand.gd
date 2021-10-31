@@ -2,13 +2,13 @@ extends Node2D
 
 var thread_pool: Array
 
-const WORLD_HEIGHT:int = 512
-const WORLD_WIDTH:int = 2048 # maybe larger
-const CHUNK_SIZE:int = 64
-const HALF_CHUNK_SIZE: int = 32
-const THREAD_COUNT: int = 8
-const TEXTURE_SIZE: int = 256
-const HC_PER_TEXTURE: int = TEXTURE_SIZE / HALF_CHUNK_SIZE
+const WORLD_HEIGHT:int = Consts.WORLD_HEIGHT
+const WORLD_WIDTH:int = Consts.WORLD_WIDTH
+const CHUNK_SIZE:int = Consts.CHUNK_SIZE
+const HALF_CHUNK_SIZE: int = Consts.HALF_CHUNK_SIZE
+const THREAD_COUNT: int = Consts.THREAD_COUNT
+const TEXTURE_SIZE: int = Consts.TEXTURE_SIZE
+const HC_PER_TEXTURE: int = Consts.HC_PER_TEXTURE
 
 
 # Called when the node enters the scene tree for the first time.
@@ -16,8 +16,11 @@ func _ready():
     assert(TEXTURE_SIZE >= HALF_CHUNK_SIZE)
     init_thread_pool(THREAD_COUNT)
     init_chunks()
+    prepare_thread()
     
 func _physics_process(delta):
+    print("tick")
+    tick_simulate()
     draw_all()
 
 func init_thread_pool(n: int):
@@ -30,8 +33,6 @@ func init_chunks():
     init_half_chunks()
     init_chunk_updaters()
     init_textures()
-    
-    tick_simulate()
     
 var half_chunk_grid: Array
 
@@ -70,6 +71,8 @@ func init_chunk_updaters():
             updater_row_array[chunk_col] = updater
             
 func tick_simulate():
+    handle_debug_input()
+    pre_simulate()
     simulate_phase(0, 0)
     #print("0, 0 ok")
     simulate_phase(0, 1)
@@ -78,13 +81,38 @@ func tick_simulate():
     #print("1, 1 ok")
     simulate_phase(1, 0)
     #print("1, 0 ok")
-    
-var updater_queues: Array
-func simulate_phase(row_mode, col_mode):
+
+func pre_simulate():
+    for hc_row_array in half_chunk_grid:
+        for hc in hc_row_array:
+            hc.pre_simulate()
+
+var updater_queues: Array # 队列的列表
+var mutex_array: Array # 每个锁用来一个队列
+var semaphore_array: Array # 控制每个线程的开始或结束
+var back_semaphore_array: Array
+func prepare_thread():
     updater_queues = []
     updater_queues.resize(THREAD_COUNT)
+    mutex_array = []
+    mutex_array.resize(THREAD_COUNT)
+    semaphore_array = []
+    semaphore_array.resize(THREAD_COUNT)
+    back_semaphore_array = []
+    back_semaphore_array.resize(THREAD_COUNT)
     for i in range(THREAD_COUNT):
+        mutex_array[i] = Mutex.new()
+        semaphore_array[i] = Semaphore.new()
+        back_semaphore_array[i] = Semaphore.new()
         updater_queues[i] = []
+    for i in range(THREAD_COUNT):
+        thread_pool[i].start(self, "simulate_worker", i)
+    
+func simulate_phase(row_mode, col_mode):
+    for i in range(THREAD_COUNT):
+        mutex_array[i].lock()
+        updater_queues[i].clear()
+        mutex_array[i].unlock()
     var row_count = WORLD_HEIGHT / HALF_CHUNK_SIZE / 2
     var col_count = WORLD_WIDTH / HALF_CHUNK_SIZE / 2
     var thread_index = 0
@@ -92,24 +120,30 @@ func simulate_phase(row_mode, col_mode):
         var hc_row = chunk_row * 2
         for chunk_col in range(col_count):
             var hc_col = chunk_col * 2
-            if hc_row % 2 == row_mode && hc_col % 2 == col_mode:
-                updater_queues[thread_index].append(chunk_updaters[chunk_row][chunk_col])
+            var updater: ChunkUpdater = chunk_updaters[chunk_row][chunk_col]
+            if updater.need_simulate() and hc_row % 2 == row_mode and hc_col % 2 == col_mode:
+                mutex_array[thread_index].lock()
+                updater_queues[thread_index].append(updater)
+                mutex_array[thread_index].unlock()
                 thread_index = (thread_index + 1) % THREAD_COUNT
-    comsume_updater_queue()
-    
-func comsume_updater_queue():
     for i in range(THREAD_COUNT):
-        var thread: Thread = thread_pool[i]
-        #print("thread %s started" % i)
-        thread.start(self, "simulate_worker", updater_queues[i])
+        # start working
+        semaphore_array[i].post()
     for i in range(THREAD_COUNT):
-        var thread = thread_pool[i]
-        thread.wait_to_finish()
-        #print("thread %s finished" % i)
+        while true:
+            back_semaphore_array[i].wait()
+            break
     
-func simulate_worker(updaters):
-    for updater in updaters:
-        updater.simulate()
+func simulate_worker(index):
+    while true:
+        semaphore_array[index].wait()
+        
+        mutex_array[index].lock()
+        for updater in updater_queues[index]:
+            updater.simulate()
+        mutex_array[index].unlock()
+        
+        back_semaphore_array[index].post()
 
 var texture_grid: Array
 export var image_chunk_scene: PackedScene
@@ -149,16 +183,22 @@ func draw_all():
             for hc_y in range(HC_PER_TEXTURE):
                 for hc_x in range(HC_PER_TEXTURE):
                     var hc = half_chunk_grid[y * HC_PER_TEXTURE + hc_y][x * HC_PER_TEXTURE + hc_x]
-                    if hc.is_draw_dirty:
+                    if hc.active:
                         t.update_image(hc, hc_x * HALF_CHUNK_SIZE, hc_y * HALF_CHUNK_SIZE)
-                        # FIXME
-                        hc.is_draw_dirty = false
 
-
+var add_queue: Array = []
 func _on_DevUI_dev_add_pixel(x, y, p):
     var ix = int(x)
     var iy = int(y)
     if ix < 0 or ix > WORLD_WIDTH - 1 or iy < 0 or iy > WORLD_HEIGHT - 1:
         return
-    var hc: HalfChunk = half_chunk_grid[iy / HALF_CHUNK_SIZE][ix / HALF_CHUNK_SIZE]
-    hc.set_pixel(ix % HALF_CHUNK_SIZE, iy % HALF_CHUNK_SIZE, p)
+    add_queue.append({"x": x, "y": y, "p": p})
+    
+func handle_debug_input():
+    for add_op in add_queue:
+        var ix = int(add_op["x"])
+        var iy = int(add_op["y"])
+        var p = add_op["p"]
+        var hc: HalfChunk = half_chunk_grid[iy / HALF_CHUNK_SIZE][ix / HALF_CHUNK_SIZE]
+        hc.set_pixel(ix % HALF_CHUNK_SIZE, iy % HALF_CHUNK_SIZE, p)
+    add_queue = []

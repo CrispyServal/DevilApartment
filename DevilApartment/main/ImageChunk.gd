@@ -25,12 +25,12 @@ func debug():
     update_image(half_chunk, 0, 0)
     
 func update_image(half_chunk, start_x, start_y):
-    print("update image for (%d, %d), start: (%d, %d)" % [half_chunk.row, half_chunk.col, start_x, start_y])
+    #print("update image for (%d, %d), start: (%d, %d)" % [half_chunk.row, half_chunk.col, start_x, start_y])
     image.lock()
     var buffer = half_chunk.get_buffer()
     for y in range(half_chunk.get_size()):
         for x in range(half_chunk.get_size()):
-            var pixel: int = buffer[y][x]
+            var pixel: int = buffer[y][x] & 0xff
             #print("(%d, %d) -> %d" % [x, y, pixel])
             image.set_pixel(start_x + x, start_y + y, Color8(pixel, 0, 0))
     image.unlock()

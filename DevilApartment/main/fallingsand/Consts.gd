@@ -1,0 +1,11 @@
+extends Node
+
+const WORLD_HEIGHT:int = 512
+const WORLD_WIDTH:int = 2048 # maybe larger
+const CHUNK_SIZE:int = 64
+const HALF_CHUNK_SIZE: int = 32
+const THREAD_COUNT: int = 8
+const TEXTURE_SIZE: int = 256
+const HC_PER_TEXTURE: int = TEXTURE_SIZE / HALF_CHUNK_SIZE
+const HALF_CHUNK_COUNT_Y = WORLD_HEIGHT / HALF_CHUNK_SIZE
+const HALF_CHUNK_COUNT_X = WORLD_WIDTH / HALF_CHUNK_SIZE
