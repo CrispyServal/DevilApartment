@@ -38,7 +38,6 @@ config/icon="res://icon.png"
 
 [autoload]
 
-Pixel="*res://main/fallingsand/Pixel.gd"
 Consts="*res://main/fallingsand/Consts.gd"
 
 [display]

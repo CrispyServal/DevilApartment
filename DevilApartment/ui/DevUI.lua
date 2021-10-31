@@ -11,11 +11,11 @@ function DevUI:setup(node_dict)
 end
 
 function DevUI:_on_Button0_toggled(button_pressed)
-    self.selected_pixel_type = Pixel.PIXEL_SAND
+    self.selected_pixel_type = 1
 end
 
 function DevUI:_on_Button1_toggled(button_pressed)
-    self.selected_pixel_type = Pixel.PIXEL_STONE
+    self.selected_pixel_type = 2
 end
 
 function DevUI:_process(delta)

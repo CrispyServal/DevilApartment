@@ -16,8 +16,8 @@ const CHUNK_PER_TEXTURE = TEXTURE_SIZE / CHUNK_SIZE
 func _ready():
     assert(TEXTURE_SIZE >= HALF_CHUNK_SIZE)
     init_thread_pool(THREAD_COUNT)
-    init_chunks()
-    prepare_thread()
+    init_world()
+    init_textures()
     
 func _physics_process(_delta):
     # print("tick")
@@ -30,106 +30,21 @@ func init_thread_pool(n: int):
         var thread = Thread.new()
         thread_pool.append(thread)
 
-func init_chunks():
-    init_world()
-    init_chunk_updaters()
-    init_textures()
+#func init_chunks():
+    #init_world()
+    #init_chunk_updaters()
+    #init_textures()
     
-var world_buffer
+var pixel_world
 func init_world():
-    var WorldBufferClass = load("res://main/fallingsand/WorldBuffer.gd")
-    world_buffer = WorldBufferClass.new()
-    world_buffer.init()
-
-var chunk_updaters: Array
-
-func init_chunk_updaters():
-    var ChunkUpdater = load("res://main/fallingsand/ChunkUpdater.gd")
-    chunk_updaters = []
-    var row_count = WORLD_HEIGHT / CHUNK_SIZE
-    var col_count = WORLD_WIDTH / CHUNK_SIZE
-    chunk_updaters.resize(row_count)
-    for chunk_row in range(row_count):
-        var updater_row_array = []
-        updater_row_array.resize(col_count)
-        chunk_updaters[chunk_row] = updater_row_array
-        for chunk_col in range(col_count):
-            var updater = ChunkUpdater.new()
-            updater.init(chunk_row, chunk_col, world_buffer)
-            updater_row_array[chunk_col] = updater
+    var PixelWorldClass  = load("res://main/fallingsand_native/PixelWorld.gdns")
+    pixel_world = PixelWorldClass.new()
             
 func tick_simulate():
     handle_debug_input()
-    pre_simulate()
-    simulate_phase(0, 0)
-    #print("0, 0 ok")
-    simulate_phase(0, 1)
-    #print("0, 1 ok")
-    simulate_phase(1, 1)
-    #print("1, 1 ok")
-    simulate_phase(1, 0)
-    #print("1, 0 ok")
-
-func pre_simulate():
-    world_buffer.pre_simulate()
-
-var updater_queues: Array # 队列的列表
-var mutex_array: Array # 每个锁用来一个队列
-var semaphore_array: Array # 控制每个线程的开始或结束
-var back_semaphore_array: Array
-func prepare_thread():
-    updater_queues = []
-    updater_queues.resize(THREAD_COUNT)
-    mutex_array = []
-    mutex_array.resize(THREAD_COUNT)
-    semaphore_array = []
-    semaphore_array.resize(THREAD_COUNT)
-    back_semaphore_array = []
-    back_semaphore_array.resize(THREAD_COUNT)
-    for i in range(THREAD_COUNT):
-        mutex_array[i] = Mutex.new()
-        semaphore_array[i] = Semaphore.new()
-        back_semaphore_array[i] = Semaphore.new()
-        updater_queues[i] = []
-    for i in range(THREAD_COUNT):
-        thread_pool[i].start(self, "simulate_worker", i)
+    pixel_world.pre_simulate()
+    pixel_world.simulate()
     
-func simulate_phase(row_mode, col_mode):
-    for i in range(THREAD_COUNT):
-        mutex_array[i].lock()
-        updater_queues[i].clear()
-        mutex_array[i].unlock()
-    var row_count = WORLD_HEIGHT / HALF_CHUNK_SIZE / 2
-    var col_count = WORLD_WIDTH / HALF_CHUNK_SIZE / 2
-    var thread_index = 0
-    for chunk_row in range(row_count):
-        var hc_row = chunk_row * 2
-        for chunk_col in range(col_count):
-            var hc_col = chunk_col * 2
-            var updater: ChunkUpdater = chunk_updaters[chunk_row][chunk_col]
-            if world_buffer.is_chunk_active(chunk_col, chunk_row) and hc_row % 2 == row_mode and hc_col % 2 == col_mode:
-                mutex_array[thread_index].lock()
-                updater_queues[thread_index].append(updater)
-                mutex_array[thread_index].unlock()
-                thread_index = (thread_index + 1) % THREAD_COUNT
-    for i in range(THREAD_COUNT):
-        # start working
-        semaphore_array[i].post()
-    for i in range(THREAD_COUNT):
-        while true:
-            back_semaphore_array[i].wait()
-            break
-    
-func simulate_worker(index):
-    while true:
-        semaphore_array[index].wait()
-        
-        mutex_array[index].lock()
-        for updater in updater_queues[index]:
-            updater.simulate()
-        mutex_array[index].unlock()
-        
-        back_semaphore_array[index].post()
 
 var texture_grid: Array
 export var image_chunk_scene: PackedScene
@@ -173,8 +88,9 @@ func draw_all():
             var world_y = y * TEXTURE_SIZE
             for yy in range(CHUNK_PER_TEXTURE):
                 for xx in range(CHUNK_PER_TEXTURE):
-                    if world_buffer.is_chunk_active(x * CHUNK_PER_TEXTURE + xx, y * CHUNK_PER_TEXTURE + yy):
-                        t.update_image(world_buffer, world_x, world_y, xx * CHUNK_SIZE, yy * CHUNK_SIZE)
+                    pass
+                    if pixel_world.is_chunk_active(x * CHUNK_PER_TEXTURE + xx, y * CHUNK_PER_TEXTURE + yy):
+                        t.update_image(pixel_world, world_x, world_y, xx * CHUNK_SIZE, yy * CHUNK_SIZE)
 
 var add_queue: Array = []
 func _on_DevUI_dev_add_pixel(x, y, p):
@@ -188,9 +104,10 @@ func handle_debug_input():
     for add_op in add_queue:
         var ix = int(add_op["x"])
         var iy = int(add_op["y"])
-        var p = add_op["p"]
+        var p = int(add_op["p"])
         #var updater: ChunkUpdater = chunk_updaters[iy / CHUNK_SIZE][ix / CHUNK_SIZE]
         #var hc: HalfChunk = half_chunk_grid[iy / HALF_CHUNK_SIZE][ix / HALF_CHUNK_SIZE]
         #updater.set_pixel(ix, iy, p)
-        world_buffer.set_pixel(ix, iy, p)
+        #world_buffer.set_pixel(ix, iy, p)
+        pixel_world.user_set_pixel(ix, iy, p)
     add_queue = []
