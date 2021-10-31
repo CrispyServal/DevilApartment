@@ -179,7 +179,10 @@ func draw_all():
         for x in range(visible_col_min, visible_col_max):
             if y >= texture_grid.size():
                 return
-            var t = texture_grid[y][x]
+            var texture_row_array = texture_grid[y]
+            if x >= texture_row_array.size():
+                return
+            var t = texture_row_array[x]
             for hc_y in range(HC_PER_TEXTURE):
                 for hc_x in range(HC_PER_TEXTURE):
                     var hc = half_chunk_grid[y * HC_PER_TEXTURE + hc_y][x * HC_PER_TEXTURE + hc_x]

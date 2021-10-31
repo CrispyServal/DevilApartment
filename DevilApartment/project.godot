@@ -10,11 +10,17 @@ config_version=4
 
 _global_script_classes=[ {
 "base": "Reference",
+"class": "ChunkUpdater",
+"language": "GDScript",
+"path": "res://main/fallingsand/ChunkUpdater.gd"
+}, {
+"base": "Reference",
 "class": "HalfChunk",
 "language": "GDScript",
 "path": "res://main/fallingsand/HalfChunk.gd"
 } ]
 _global_script_class_icons={
+"ChunkUpdater": "",
 "HalfChunk": ""
 }
 
@@ -23,6 +29,11 @@ _global_script_class_icons={
 config/name="DevilApartment"
 run/main_scene="res://main/MainScene.tscn"
 config/icon="res://icon.png"
+
+[autoload]
+
+Pixel="*res://main/fallingsand/Pixel.gd"
+Consts="*res://main/fallingsand/Consts.gd"
 
 [display]
 
@@ -58,6 +69,7 @@ ui_zoom_out={
 
 [physics]
 
+common/physics_fps=10
 common/enable_pause_aware_picking=true
 
 [rendering]

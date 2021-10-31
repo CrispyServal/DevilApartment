@@ -33,7 +33,7 @@ func init(hc_row, hc_col, all_hc, max_row, max_col):
             my_hc_row[col] = hc
         
 func simulate():      
-    #print("updater simulating: %d, %d" % [row, col])
+    print("updater simulating: %d, %d" % [row, col])
     for y in range(HALF_CHUNK_SIZE * 2 - 1, -1, -1):
         for x in range(HALF_CHUNK_SIZE * 2):
             var p = get_pixel(x, y) # 这里肯定能取到
@@ -68,10 +68,10 @@ func simulate():
     
 # 以当前chunk为起点的x和y来索引像素，内部自动找hc
 func get_pixel(x, y):
-    assert(x >= -HALF_CHUNK_SIZE)
-    assert(x < 3 * HALF_CHUNK_SIZE)
-    assert(y >= -HALF_CHUNK_SIZE)
-    assert(y < 3 * HALF_CHUNK_SIZE)
+    #assert(x >= -HALF_CHUNK_SIZE)
+    #assert(x < 3 * HALF_CHUNK_SIZE)
+    #assert(y >= -HALF_CHUNK_SIZE)
+    #assert(y < 3 * HALF_CHUNK_SIZE)
     var hc = hc_grid[(y + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE][(x + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE]
     return hc.get_buffer()[y % HALF_CHUNK_SIZE][x % HALF_CHUNK_SIZE]
 
@@ -82,11 +82,11 @@ func set_pixel(x, y, p):
 func can_get_pixel(x, y):
     if self.row == 0 and y < 0:
         return false
-    if self.row == Consts.HALF_CHUNK_COUNT_Y and y >= HALF_CHUNK_SIZE * 2:
+    if self.row == Consts.HALF_CHUNK_COUNT_Y - 2 and y >= HALF_CHUNK_SIZE * 2:
         return false
     if self.col == 0 and x < 0:
         return false
-    if self.col == Consts.HALF_CHUNK_COUNT_X and x >= HALF_CHUNK_SIZE * 2:
+    if self.col == Consts.HALF_CHUNK_COUNT_X - 2 and x >= HALF_CHUNK_SIZE * 2:
         return false
     return true
 

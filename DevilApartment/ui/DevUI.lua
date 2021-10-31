@@ -11,16 +11,17 @@ function DevUI:setup(node_dict)
 end
 
 function DevUI:_on_Button0_toggled(button_pressed)
-    self.selected_pixel_type = 1
+    self.selected_pixel_type = Pixel.PIXEL_SAND
 end
 
 function DevUI:_on_Button1_toggled(button_pressed)
-    self.selected_pixel_type = 2
+    self.selected_pixel_type = Pixel.PIXEL_STONE
 end
 
 function DevUI:_process(delta)
     if self.is_drawing then
         local mouse_pos = self.root:get_global_mouse_position()
+        print("draw: " .. self.selected_pixel_type)
         self:emit_signal("dev_add_pixel", mouse_pos.x, mouse_pos.y, self.selected_pixel_type)
     end
 end

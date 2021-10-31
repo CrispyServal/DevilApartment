@@ -19,7 +19,7 @@ function Debug:_input(event)
         local x = mouse_pos.x
         local y = mouse_pos.y
         self.tile_label:set_text(
-            string.format("(%s,%s)", x, y)
+            string.format("(%d,%d), hc: (%d, %d)", math.floor(x), math.floor(y), math.floor(x / Consts.HALF_CHUNK_SIZE), math.floor(y / Consts.HALF_CHUNK_SIZE))
         )
     end
 end
