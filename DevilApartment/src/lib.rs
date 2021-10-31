@@ -1,19 +1,18 @@
 use gdnative::prelude::*;
 
-mod consts;
-mod pixel;
-mod world_buffer;
 mod chunk_updater;
-mod pixel_world;
-mod image_updater;
+mod consts;
 mod image_chunk;
+mod image_updater;
+mod pixel;
+mod pixel_world;
+mod world_buffer;
 
-use world_buffer::WorldBuffer;
 use chunk_updater::ChunkUpdater;
+use image_chunk::ImageChunk;
 use pixel::Pixel;
 use pixel_world::PixelWorld;
-use image_chunk::ImageChunk;
-
+use world_buffer::WorldBuffer;
 
 fn init(handle: InitHandle) {
     handle.add_class::<PixelWorld>();

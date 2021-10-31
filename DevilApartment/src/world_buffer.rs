@@ -39,7 +39,6 @@ impl HalfChunk {
     pub fn set_pixel(&self, x: usize, y: usize, pixel: Pixel) {
         self.data.lock().unwrap().set_pixel(x, y, pixel)
     }
-
 }
 
 #[derive(Default)]
@@ -105,7 +104,7 @@ impl WorldBuffer {
         }
     }
 
-    pub fn pre_simulate(&self, ) {
+    pub fn pre_simulate(&self) {
         self.chunk_grid
             .iter()
             .for_each(|row| row.iter().for_each(|ch| ch.pre_simulate()));
@@ -125,8 +124,12 @@ impl WorldBuffer {
     }
 
     pub fn set_pixel(&self, world_x: usize, world_y: usize, pixel: Pixel) {
-        self.half_chunk_grid[world_y / HALF_CHUNK_SIZE][world_x / HALF_CHUNK_SIZE]
-            .set_pixel(world_x % HALF_CHUNK_SIZE, world_y % HALF_CHUNK_SIZE, pixel);
+        //println!("set {}, {} to {}", world_x, world_y, pixel.id);
+        self.half_chunk_grid[world_y / HALF_CHUNK_SIZE][world_x / HALF_CHUNK_SIZE].set_pixel(
+            world_x % HALF_CHUNK_SIZE,
+            world_y % HALF_CHUNK_SIZE,
+            pixel,
+        );
         self.set_chunk_active_next(world_x / CHUNK_SIZE, world_y / CHUNK_SIZE);
     }
 }

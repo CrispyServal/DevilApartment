@@ -25,8 +25,8 @@ func init(row, col, world_buffer):
     self.start_x = col * CHUNK_SIZE
     self.start_y = row * CHUNK_SIZE
     self.world_buffer = world_buffer
-    
-func simulate():      
+
+func simulate():
     #print("updater simulating: %d, %d" % [col, row])
     #print("y range: (%d, %d); x range: (%d, %d)" % [start_y + CHUNK_SIZE, start_y, start_x, start_x + CHUNK_SIZE])
     for y in range(start_y + CHUNK_SIZE - 1, start_y -1, -1):
@@ -59,9 +59,9 @@ func simulate():
                     var tmp = get_pixel(x, final_y)
                     set_pixel(x, final_y, p)
                     set_pixel(x, y, tmp)
-                        
- 
-    
+
+
+
 # 以当前chunk为起点的x和y来索引像素，内部自动找hc
 func get_pixel(x, y):
     #assert(x >= -HALF_CHUNK_SIZE)
@@ -72,9 +72,9 @@ func get_pixel(x, y):
     #return hc.get_buffer()[y % HALF_CHUNK_SIZE][x % HALF_CHUNK_SIZE]
     return world_buffer.get_pixel(x, y)
 
-func set_pixel(x, y, p):   
+func set_pixel(x, y, p):
     #var hc = hc_grid[(y + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE][(x + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE]
     world_buffer.set_pixel(x, y, p)
-    
+
 func can_get_pixel(x, y):
     return x >= 0 and y >= 0 and x < WORLD_WIDTH and y < WORLD_HEIGHT

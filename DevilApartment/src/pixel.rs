@@ -10,7 +10,7 @@ impl Default for Pixel {
         Self {
             id: 0,
             is_fall: false,
-            speed: 8
+            speed: 8,
         }
     }
 }
@@ -52,7 +52,7 @@ impl Pixel {
         self.id == 0
     }
 
-    pub fn is_fall(&self) -> bool{
+    pub fn is_fall(&self) -> bool {
         self.is_fall
     }
 

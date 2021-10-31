@@ -75,6 +75,7 @@ impl PixelWorld {
         }
 
         active_updaters
+            // .into_iter()
             .into_par_iter()
             .for_each(|updater| updater.simulate(&self.world_buffer));
     }
