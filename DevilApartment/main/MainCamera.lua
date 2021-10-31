@@ -17,22 +17,22 @@ function MainCamera:_process(delta)
     local zoom = self:get_zoom()
     local offset = delta * 100 * zoom:length()
     local rect_changed = false
-    if Input:is_action_pressed("ui_left") then
+    if Input:is_action_pressed("move_left") then
         self:set_position(Vector2(camera_pos.x - offset, camera_pos.y))
         rect_changed = true
     end
     camera_pos = self:get_position()
-    if Input:is_action_pressed("ui_right") then
+    if Input:is_action_pressed("move_right") then
         self:set_position(Vector2(camera_pos.x + offset, camera_pos.y))
         rect_changed = true
     end
     camera_pos = self:get_position()
-    if Input:is_action_pressed("ui_down") then
+    if Input:is_action_pressed("move_down") then
         self:set_position(Vector2(camera_pos.x, camera_pos.y + offset))
         rect_changed = true
     end
     camera_pos = self:get_position()
-    if Input:is_action_pressed("ui_up") then
+    if Input:is_action_pressed("move_up") then
         self:set_position(Vector2(camera_pos.x, camera_pos.y - offset))
         rect_changed = true
     end

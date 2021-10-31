@@ -1,42 +1,38 @@
 extends Reference
 class_name ChunkUpdater
 
-# 存储4x4的hc的引用（边上可能会空缺）
 # 中间2x2是更新主体，边上是可能被更新的内容
 
-var hc_grid: Array
-# 标记自己的位置，hc层面的下标
+# 标记自己的位置，chunk层面的下标
 var row: int
 var col: int
 const HALF_CHUNK_SIZE: int = Consts.HALF_CHUNK_SIZE
+const CHUNK_SIZE: int = Consts.CHUNK_SIZE
+const CHUNK_COUNT_Y: int = Consts.CHUNK_COUNT_Y
+const CHUNK_COUNT_X: int = Consts.CHUNK_COUNT_X
+const WORLD_WIDTH: int = Consts.WORLD_WIDTH
+const WORLD_HEIGHT: int = Consts.WORLD_HEIGHT
 
-func init(hc_row, hc_col, all_hc, max_row, max_col):
-    assert(hc_row % 2 == 0)
-    assert(hc_col % 2 == 0)
-    self.row = hc_row
-    self.col = hc_col
+var world_buffer
 
-    hc_grid = []
-    hc_grid.resize(4)
-    for row in range(4):
-        var my_hc_row = []
-        my_hc_row.resize(4)
-        hc_grid[row] = my_hc_row
-        var row_in_all_hc = hc_row - 1 + row
-        if row_in_all_hc < 0 or row_in_all_hc >= max_row:
-            continue
-        for col in range(4):
-            var col_in_all_hc = hc_col - 1 + col
-            if col_in_all_hc < 0 or col_in_all_hc >= max_col:
-                continue
-            var hc = all_hc[row_in_all_hc][col_in_all_hc]
-            my_hc_row[col] = hc
-        
+var start_x: int
+var start_y: int
+
+
+func init(row, col, world_buffer):
+    self.row = row
+    self.col = col
+    self.start_x = col * CHUNK_SIZE
+    self.start_y = row * CHUNK_SIZE
+    self.world_buffer = world_buffer
+    
 func simulate():      
-    print("updater simulating: %d, %d" % [row, col])
-    for y in range(HALF_CHUNK_SIZE * 2 - 1, -1, -1):
-        for x in range(HALF_CHUNK_SIZE * 2):
+    #print("updater simulating: %d, %d" % [col, row])
+    #print("y range: (%d, %d); x range: (%d, %d)" % [start_y + CHUNK_SIZE, start_y, start_x, start_x + CHUNK_SIZE])
+    for y in range(start_y + CHUNK_SIZE - 1, start_y -1, -1):
+        for x in range(start_x, start_x + CHUNK_SIZE):
             var p = get_pixel(x, y) # 这里肯定能取到
+            #print("p = %x" % p)
             var is_fall = Pixel.is_fall(p)
             if is_fall:
                 var dy = Pixel.get_dy(p)
@@ -72,23 +68,13 @@ func get_pixel(x, y):
     #assert(x < 3 * HALF_CHUNK_SIZE)
     #assert(y >= -HALF_CHUNK_SIZE)
     #assert(y < 3 * HALF_CHUNK_SIZE)
-    var hc = hc_grid[(y + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE][(x + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE]
-    return hc.get_buffer()[y % HALF_CHUNK_SIZE][x % HALF_CHUNK_SIZE]
+    #var hc = hc_grid[(y + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE][(x + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE]
+    #return hc.get_buffer()[y % HALF_CHUNK_SIZE][x % HALF_CHUNK_SIZE]
+    return world_buffer.get_pixel(x, y)
 
 func set_pixel(x, y, p):   
-    var hc = hc_grid[(y + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE][(x + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE]
-    hc.set_pixel(x % HALF_CHUNK_SIZE, y % HALF_CHUNK_SIZE, p)
+    #var hc = hc_grid[(y + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE][(x + HALF_CHUNK_SIZE) / HALF_CHUNK_SIZE]
+    world_buffer.set_pixel(x, y, p)
     
 func can_get_pixel(x, y):
-    if self.row == 0 and y < 0:
-        return false
-    if self.row == Consts.HALF_CHUNK_COUNT_Y - 2 and y >= HALF_CHUNK_SIZE * 2:
-        return false
-    if self.col == 0 and x < 0:
-        return false
-    if self.col == Consts.HALF_CHUNK_COUNT_X - 2 and x >= HALF_CHUNK_SIZE * 2:
-        return false
-    return true
-
-func need_simulate():
-    return hc_grid[1][1].active or hc_grid[1][2].active or hc_grid[2][1].active or hc_grid[2][2].active
+    return x >= 0 and y >= 0 and x < WORLD_WIDTH and y < WORLD_HEIGHT

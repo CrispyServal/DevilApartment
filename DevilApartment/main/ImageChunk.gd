@@ -7,32 +7,25 @@ extends Sprite
 
 var image: Image
 var image_texture: ImageTexture
+const TEXTURE_SIZE: int = Consts.TEXTURE_SIZE
+const CHUNK_SIZE = Consts.CHUNK_SIZE
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
     image = Image.new()
-    image.create(256, 256, false, Image.FORMAT_R8)
+    image.create(TEXTURE_SIZE, TEXTURE_SIZE, false, Image.FORMAT_R8)
     
     image_texture = ImageTexture.new()
-    image_texture.create(256, 256, Image.FORMAT_R8, ImageTexture.STORAGE_RAW)
-    #debug()
+    image_texture.create(TEXTURE_SIZE, TEXTURE_SIZE, Image.FORMAT_R8, ImageTexture.STORAGE_RAW)
     
-    
-func debug():
-    var HalfChunk = load("res://main/fallingsand/HalfChunk.gd")
-    var half_chunk: HalfChunk = HalfChunk.new()
-    half_chunk.init(32, 0, 0)
-    update_image(half_chunk, 0, 0)
-    
-func update_image(half_chunk, start_x, start_y):
-    #print("update image for (%d, %d), start: (%d, %d)" % [half_chunk.row, half_chunk.col, start_x, start_y])
+func update_image(world_buffer, start_x, start_y, offset_x, offset_y):
+    #print("update image start: (%d, %d), offset: (%d, %d)" % [start_x, start_y, offset_x ,offset_y])
     image.lock()
-    var buffer = half_chunk.get_buffer()
-    for y in range(half_chunk.get_size()):
-        for x in range(half_chunk.get_size()):
-            var pixel: int = buffer[y][x] & 0xff
+    for y in range(offset_y, offset_y + CHUNK_SIZE):
+        for x in range(offset_x, offset_x + CHUNK_SIZE):
+            var pixel: int = world_buffer.get_pixel(start_x + x, start_y + y) & 0xff
             #print("(%d, %d) -> %d" % [x, y, pixel])
-            image.set_pixel(start_x + x, start_y + y, Color8(pixel, 0, 0))
+            image.set_pixel(x, y, Color8(pixel, 0, 0))
     image.unlock()
     #image.save_png("res://debug_output/texture.png")
     image_texture.set_data(image)

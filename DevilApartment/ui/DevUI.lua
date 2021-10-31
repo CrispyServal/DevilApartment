@@ -21,7 +21,7 @@ end
 function DevUI:_process(delta)
     if self.is_drawing then
         local mouse_pos = self.root:get_global_mouse_position()
-        print("draw: " .. self.selected_pixel_type)
+        --print("draw: " .. self.selected_pixel_type)
         self:emit_signal("dev_add_pixel", mouse_pos.x, mouse_pos.y, self.selected_pixel_type)
     end
 end

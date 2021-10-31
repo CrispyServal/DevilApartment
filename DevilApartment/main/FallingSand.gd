@@ -9,6 +9,7 @@ const HALF_CHUNK_SIZE: int = Consts.HALF_CHUNK_SIZE
 const THREAD_COUNT: int = Consts.THREAD_COUNT
 const TEXTURE_SIZE: int = Consts.TEXTURE_SIZE
 const HC_PER_TEXTURE: int = Consts.HC_PER_TEXTURE
+const CHUNK_PER_TEXTURE = TEXTURE_SIZE / CHUNK_SIZE
 
 
 # Called when the node enters the scene tree for the first time.
@@ -18,8 +19,8 @@ func _ready():
     init_chunks()
     prepare_thread()
     
-func _physics_process(delta):
-    print("tick")
+func _physics_process(_delta):
+    # print("tick")
     tick_simulate()
     draw_all()
 
@@ -30,44 +31,31 @@ func init_thread_pool(n: int):
         thread_pool.append(thread)
 
 func init_chunks():
-    init_half_chunks()
+    init_world()
     init_chunk_updaters()
     init_textures()
     
-var half_chunk_grid: Array
-
-func init_half_chunks():
-    var HalfChunk = load("res://main/fallingsand/HalfChunk.gd")
-    half_chunk_grid = []
-    var row_count: int = WORLD_HEIGHT / HALF_CHUNK_SIZE
-    var col_count: int = WORLD_WIDTH / HALF_CHUNK_SIZE
-    half_chunk_grid.resize(row_count)
-    for row in range(row_count):
-        var half_chunks_row = []
-        half_chunks_row.resize(col_count)
-        for col in range(col_count):
-            var half_chunk = HalfChunk.new()
-            half_chunk.init(HALF_CHUNK_SIZE, row, col)
-            half_chunks_row[col] = half_chunk
-        half_chunk_grid[row] = half_chunks_row
+var world_buffer
+func init_world():
+    var WorldBufferClass = load("res://main/fallingsand/WorldBuffer.gd")
+    world_buffer = WorldBufferClass.new()
+    world_buffer.init()
 
 var chunk_updaters: Array
 
 func init_chunk_updaters():
     var ChunkUpdater = load("res://main/fallingsand/ChunkUpdater.gd")
     chunk_updaters = []
-    var row_count = WORLD_HEIGHT / HALF_CHUNK_SIZE / 2
-    var col_count = WORLD_WIDTH / HALF_CHUNK_SIZE / 2
+    var row_count = WORLD_HEIGHT / CHUNK_SIZE
+    var col_count = WORLD_WIDTH / CHUNK_SIZE
     chunk_updaters.resize(row_count)
     for chunk_row in range(row_count):
-        var hc_row = chunk_row * 2
         var updater_row_array = []
         updater_row_array.resize(col_count)
         chunk_updaters[chunk_row] = updater_row_array
         for chunk_col in range(col_count):
-            var hc_col = chunk_col * 2
             var updater = ChunkUpdater.new()
-            updater.init(hc_row, hc_col, half_chunk_grid, row_count * 2, col_count * 2)
+            updater.init(chunk_row, chunk_col, world_buffer)
             updater_row_array[chunk_col] = updater
             
 func tick_simulate():
@@ -83,9 +71,7 @@ func tick_simulate():
     #print("1, 0 ok")
 
 func pre_simulate():
-    for hc_row_array in half_chunk_grid:
-        for hc in hc_row_array:
-            hc.pre_simulate()
+    world_buffer.pre_simulate()
 
 var updater_queues: Array # 队列的列表
 var mutex_array: Array # 每个锁用来一个队列
@@ -121,7 +107,7 @@ func simulate_phase(row_mode, col_mode):
         for chunk_col in range(col_count):
             var hc_col = chunk_col * 2
             var updater: ChunkUpdater = chunk_updaters[chunk_row][chunk_col]
-            if updater.need_simulate() and hc_row % 2 == row_mode and hc_col % 2 == col_mode:
+            if world_buffer.is_chunk_active(chunk_col, chunk_row) and hc_row % 2 == row_mode and hc_col % 2 == col_mode:
                 mutex_array[thread_index].lock()
                 updater_queues[thread_index].append(updater)
                 mutex_array[thread_index].unlock()
@@ -173,21 +159,22 @@ func _on_MainCamera_update_camera_rect(rect: Rect2):
     visible_row_max = int((rect.position.y + rect.size.y) / TEXTURE_SIZE) + 1
     visible_col_max = int((rect.position.x + rect.size.x) / TEXTURE_SIZE) + 1
     #prints("rect: ", visible_row_min, visible_row_max, visible_col_min, visible_col_max)
-    
+
 func draw_all():
     for y in range(visible_row_min, visible_row_max):
         for x in range(visible_col_min, visible_col_max):
-            if y >= texture_grid.size():
+            if y < 0 or y >= texture_grid.size():
                 return
             var texture_row_array = texture_grid[y]
-            if x >= texture_row_array.size():
+            if x < 0 or x >= texture_row_array.size():
                 return
             var t = texture_row_array[x]
-            for hc_y in range(HC_PER_TEXTURE):
-                for hc_x in range(HC_PER_TEXTURE):
-                    var hc = half_chunk_grid[y * HC_PER_TEXTURE + hc_y][x * HC_PER_TEXTURE + hc_x]
-                    if hc.active:
-                        t.update_image(hc, hc_x * HALF_CHUNK_SIZE, hc_y * HALF_CHUNK_SIZE)
+            var world_x = x * TEXTURE_SIZE
+            var world_y = y * TEXTURE_SIZE
+            for yy in range(CHUNK_PER_TEXTURE):
+                for xx in range(CHUNK_PER_TEXTURE):
+                    if world_buffer.is_chunk_active(x * CHUNK_PER_TEXTURE + xx, y * CHUNK_PER_TEXTURE + yy):
+                        t.update_image(world_buffer, world_x, world_y, xx * CHUNK_SIZE, yy * CHUNK_SIZE)
 
 var add_queue: Array = []
 func _on_DevUI_dev_add_pixel(x, y, p):
@@ -202,6 +189,8 @@ func handle_debug_input():
         var ix = int(add_op["x"])
         var iy = int(add_op["y"])
         var p = add_op["p"]
-        var hc: HalfChunk = half_chunk_grid[iy / HALF_CHUNK_SIZE][ix / HALF_CHUNK_SIZE]
-        hc.set_pixel(ix % HALF_CHUNK_SIZE, iy % HALF_CHUNK_SIZE, p)
+        #var updater: ChunkUpdater = chunk_updaters[iy / CHUNK_SIZE][ix / CHUNK_SIZE]
+        #var hc: HalfChunk = half_chunk_grid[iy / HALF_CHUNK_SIZE][ix / HALF_CHUNK_SIZE]
+        #updater.set_pixel(ix, iy, p)
+        world_buffer.set_pixel(ix, iy, p)
     add_queue = []
