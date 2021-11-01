@@ -8,28 +8,6 @@
 
 config_version=4
 
-_global_script_classes=[ {
-"base": "Reference",
-"class": "ChunkUpdater",
-"language": "GDScript",
-"path": "res://main/fallingsand/ChunkUpdater.gd"
-}, {
-"base": "Reference",
-"class": "HalfChunk",
-"language": "GDScript",
-"path": "res://main/fallingsand/HalfChunk.gd"
-}, {
-"base": "Reference",
-"class": "WorldBuffer",
-"language": "GDScript",
-"path": "res://main/fallingsand/WorldBuffer.gd"
-} ]
-_global_script_class_icons={
-"ChunkUpdater": "",
-"HalfChunk": "",
-"WorldBuffer": ""
-}
-
 [application]
 
 config/name="DevilApartment"
