@@ -27,9 +27,12 @@ impl ChunkUpdater {
                 let mut pixel = world_buffer.get_pixel(world_x, world_y);
                 if pixel.is_fall() {
                     let dy = pixel.get_dy();
-                    let mut x_check = vec![world_x, world_x + 1];
-                    if world_x > 0 {
+                    let mut x_check = vec![world_x];
+                    if world_x > 0 && world_buffer.get_pixel(world_x - 1, world_y).is_empty() {
                         x_check.push(world_x - 1);
+                    }
+                    if world_buffer.get_pixel(world_x + 1, world_y).is_empty() {
+                        x_check.push(world_x + 1);
                     }
                     for xx in x_check.into_iter() {
                         let mut is_stop = false;
