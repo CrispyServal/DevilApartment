@@ -7,6 +7,7 @@ mod image_updater;
 mod pixel;
 mod pixel_world;
 mod world_buffer;
+mod range2d;
 
 use chunk_updater::ChunkUpdater;
 use image_chunk::ImageChunk;
