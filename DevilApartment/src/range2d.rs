@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct Range2d {
     pub min_x: usize,
     pub max_x: usize,

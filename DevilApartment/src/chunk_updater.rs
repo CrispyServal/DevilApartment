@@ -17,8 +17,13 @@ impl ChunkUpdater {
     }
 
     pub fn simulate(&self, world_buffer: &WorldBuffer) {
-        for world_y in (self.start_world_y..self.start_world_y + CHUNK_SIZE).rev() {
-            for world_x in (self.start_world_x..self.start_world_x + CHUNK_SIZE) {
+        let active_range = world_buffer.get_chunk_active_range(self.chunk_x, self.chunk_y);
+        for world_y in
+            (self.start_world_y + active_range.min_y..self.start_world_y + active_range.max_y).rev()
+        {
+            for world_x in
+                (self.start_world_x + active_range.min_x..self.start_world_x + active_range.max_x)
+            {
                 let mut pixel = world_buffer.get_pixel(world_x, world_y);
                 if pixel.is_fall() {
                     let dy = pixel.get_dy();

@@ -1,7 +1,8 @@
 use std::sync::Mutex;
 
 use crate::consts::*;
-use crate::pixel::Pixel;
+use crate::Pixel;
+use crate::Range2d;
 
 pub struct HalfChunkInner {
     pub x: usize,
@@ -45,6 +46,8 @@ impl HalfChunk {
 pub struct ChunkInner {
     is_active: bool,
     is_active_next: bool,
+    active_range: Range2d,
+    active_range_next: Range2d,
 }
 
 pub struct Chunk {
@@ -56,14 +59,25 @@ impl Chunk {
         let mut inner = self.data.lock().unwrap();
         inner.is_active = inner.is_active_next;
         inner.is_active_next = false;
+        inner.active_range = inner.active_range_next;
+        inner.active_range_next = Range2d::default();
     }
 
     pub fn is_active(&self) -> bool {
         self.data.lock().unwrap().is_active
     }
 
-    pub fn set_active_next(&self) {
-        self.data.lock().unwrap().is_active_next = true;
+    pub fn set_active_next(&self, x_in_chunk: usize, y_in_chunk: usize) {
+        let mut inner = self.data.lock().unwrap();
+        inner.is_active_next = true;
+        inner.active_range_next.min_x = inner.active_range_next.min_x.min(x_in_chunk);
+        inner.active_range_next.max_x = inner.active_range_next.max_x.max(x_in_chunk + 1);
+        inner.active_range_next.min_y = inner.active_range_next.min_y.min(y_in_chunk);
+        inner.active_range_next.max_y = inner.active_range_next.max_y.max(y_in_chunk + 1);
+    }
+
+    pub fn get_active_range(&self) -> Range2d {
+        self.data.lock().unwrap().active_range
     }
 }
 
@@ -114,8 +128,12 @@ impl WorldBuffer {
         self.chunk_grid[chunk_y][chunk_x].is_active()
     }
 
-    pub fn set_chunk_active_next(&self, chunk_x: usize, chunk_y: usize) {
-        self.chunk_grid[chunk_y][chunk_x].set_active_next()
+    pub fn set_chunk_active_next(&self, chunk_x: usize, chunk_y: usize, x_in_chunk: usize, y_in_chunk: usize) {
+        self.chunk_grid[chunk_y][chunk_x].set_active_next(x_in_chunk, y_in_chunk);
+    }
+
+    pub fn get_chunk_active_range(&self, chunk_x: usize, chunk_y: usize) -> Range2d {
+        self.chunk_grid[chunk_y][chunk_x].get_active_range()
     }
 
     pub fn get_pixel(&self, world_x: usize, world_y: usize) -> Pixel {
@@ -130,6 +148,10 @@ impl WorldBuffer {
             world_y % HALF_CHUNK_SIZE,
             pixel,
         );
-        self.set_chunk_active_next(world_x / CHUNK_SIZE, world_y / CHUNK_SIZE);
+        let chunk_x = world_x / CHUNK_SIZE;
+        let chunk_y = world_y / CHUNK_SIZE;
+        let x_in_chunk = world_x % CHUNK_SIZE;
+        let y_in_chunk = world_y % CHUNK_SIZE;
+        self.set_chunk_active_next(chunk_x, chunk_y, x_in_chunk, y_in_chunk);
     }
 }

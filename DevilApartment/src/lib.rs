@@ -14,6 +14,7 @@ use image_chunk::ImageChunk;
 use pixel::Pixel;
 use pixel_world::PixelWorld;
 use world_buffer::WorldBuffer;
+use range2d::Range2d;
 
 fn init(handle: InitHandle) {
     handle.add_class::<PixelWorld>();

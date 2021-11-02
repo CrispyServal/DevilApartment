@@ -1,4 +1,5 @@
 use crate::consts::*;
+use crate::Range2d;
 use crate::{ImageChunk, PixelWorld};
 use gdnative::prelude::*;
 use rayon::prelude::*;
@@ -6,20 +7,14 @@ use rayon::prelude::*;
 #[derive(NativeClass)]
 #[inherit(Reference)]
 pub struct ImageUpdater {
-    visible_x_min: usize,
-    visible_x_max: usize,
-    visible_y_min: usize,
-    visible_y_max: usize,
+    range: Range2d,
 }
 
 #[methods]
 impl ImageUpdater {
     pub fn new(_owner: &Reference) -> Self {
         Self {
-            visible_x_min: 0,
-            visible_x_max: 0,
-            visible_y_min: 0,
-            visible_y_max: 0,
+            range: Range2d::new(0, 0, 0, 0),
         }
     }
 
@@ -32,10 +27,7 @@ impl ImageUpdater {
         min_y: usize,
         max_y: usize,
     ) {
-        self.visible_x_min = min_x;
-        self.visible_x_max = max_x;
-        self.visible_y_min = min_y;
-        self.visible_y_max = max_y;
+        self.range = Range2d::new(min_x, max_x, min_y, max_y);
     }
 
     #[export]
@@ -51,8 +43,8 @@ impl ImageUpdater {
             .expect("cast to pixel world failed");
         //godot_print!("{}", image_grid.len());
         let mut works = vec![];
-        for y in self.visible_y_min..self.visible_y_max {
-            for x in self.visible_x_min..self.visible_x_max {
+        for y in self.range.min_y..self.range.max_y {
+            for x in self.range.min_x..self.range.max_x {
                 if y >= image_grid.len() {
                     return;
                 }
