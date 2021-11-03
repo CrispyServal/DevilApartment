@@ -3,27 +3,36 @@ use std::sync::Mutex;
 use crate::consts::*;
 use crate::Pixel;
 use crate::Range2d;
+use crate::pixel::default_pixel;
 
 pub struct HalfChunkInner {
     pub x: usize,
     pub y: usize,
-    pub data: Vec<Vec<Pixel>>,
+    pub data: Vec<Vec<Box<dyn Pixel>>>,
 }
 
 impl HalfChunkInner {
     pub fn new(x: usize, y: usize) -> Self {
+        let mut pixel_grid = Vec::with_capacity(HALF_CHUNK_SIZE);
+        for _ in 0..HALF_CHUNK_SIZE {
+            let mut pixel_row = Vec::with_capacity(HALF_CHUNK_SIZE);
+            for _ in 0..HALF_CHUNK_SIZE {
+                pixel_row.push(default_pixel());
+            }
+            pixel_grid.push(pixel_row);
+        }
         Self {
             x,
             y,
-            data: vec![vec![Pixel::default(); HALF_CHUNK_SIZE]; HALF_CHUNK_SIZE],
+            data: pixel_grid,
         }
     }
 
-    pub fn get_pixel(&self, x: usize, y: usize) -> Pixel {
-        self.data[y][x]
+    pub fn get_pixel(&self, x: usize, y: usize) -> &dyn Pixel {
+        self.data[y][x].as_ref()
     }
 
-    pub fn set_pixel(&mut self, x: usize, y: usize, pixel: Pixel) {
+    pub fn set_pixel(&mut self, x: usize, y: usize, pixel: Box<dyn Pixel>) {
         self.data[y][x] = pixel;
     }
 }
@@ -33,11 +42,11 @@ pub struct HalfChunk {
 }
 
 impl HalfChunk {
-    pub fn get_pixel(&self, x: usize, y: usize) -> Pixel {
+    pub fn get_pixel(&self, x: usize, y: usize) -> &dyn Pixel {
         self.data.lock().unwrap().get_pixel(x, y)
     }
 
-    pub fn set_pixel(&self, x: usize, y: usize, pixel: Pixel) {
+    pub fn set_pixel(&self, x: usize, y: usize, pixel: Box<dyn Pixel>) {
         self.data.lock().unwrap().set_pixel(x, y, pixel)
     }
 }
@@ -136,12 +145,12 @@ impl WorldBuffer {
         self.chunk_grid[chunk_y][chunk_x].get_active_range()
     }
 
-    pub fn get_pixel(&self, world_x: usize, world_y: usize) -> Pixel {
+    pub fn get_pixel(&self, world_x: usize, world_y: usize) -> &dyn Pixel {
         self.half_chunk_grid[world_y / HALF_CHUNK_SIZE][world_x / HALF_CHUNK_SIZE]
             .get_pixel(world_x % HALF_CHUNK_SIZE, world_y % HALF_CHUNK_SIZE)
     }
 
-    pub fn set_pixel(&self, world_x: usize, world_y: usize, pixel: Pixel) {
+    pub fn set_pixel(&self, world_x: usize, world_y: usize, pixel: Box<dyn Pixel>) {
         //println!("set {}, {} to {}", world_x, world_y, pixel.id);
         self.half_chunk_grid[world_y / HALF_CHUNK_SIZE][world_x / HALF_CHUNK_SIZE].set_pixel(
             world_x % HALF_CHUNK_SIZE,

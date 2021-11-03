@@ -1,4 +1,4 @@
-use crate::consts::*;
+use crate::{consts::*, pixel::new_from_id};
 use gdnative::prelude::*;
 use rayon::prelude::*;
 
@@ -45,13 +45,13 @@ impl PixelWorld {
     pub fn user_set_pixel(&self, _owner: &Reference, world_x: usize, world_y: usize, id: u8) {
         //godot_print!("add pixel: {}, {}: {}", world_x, world_y, id);
         self.world_buffer
-            .set_pixel(world_x, world_y, Pixel::from_id(id))
+            .set_pixel(world_x, world_y, new_from_id(id))
     }
 
     // TODO: delete this
     #[export]
     pub fn get_pixel(&self, _owner: &Reference, world_x: usize, world_y: usize) -> u8 {
-        self.world_buffer.get_pixel(world_x, world_y).id
+        self.world_buffer.get_pixel(world_x, world_y).get_id()
     }
 
     // TODO: delete this

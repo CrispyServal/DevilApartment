@@ -24,7 +24,9 @@ impl ChunkUpdater {
             for world_x in
                 self.start_world_x + active_range.min_x..self.start_world_x + active_range.max_x
             {
-                let mut pixel = world_buffer.get_pixel(world_x, world_y);
+                let pixel = world_buffer.get_pixel(world_x, world_y);
+                pixel.step(&world_buffer);
+                /* 
                 if pixel.is_fall() {
                     let dy = pixel.get_dy();
                     let mut x_check = vec![world_x];
@@ -60,7 +62,7 @@ impl ChunkUpdater {
                             break;
                         }
                     }
-                }
+                }*/
             }
         }
     }
