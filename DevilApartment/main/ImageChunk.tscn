@@ -1,37 +1,18 @@
 [gd_scene load_steps=5 format=2]
 
 [ext_resource path="res://main/fallingsand_native/ImageChunk.gdns" type="Script" id=1]
+[ext_resource path="res://shader/ImageChunk.gdshader" type="Shader" id=2]
 
-[sub_resource type="Shader" id=1]
-code = "shader_type canvas_item;
-
-uniform sampler2D my_texture;
-
-vec4 color_lookup(uint pixel_type) {
-    if (pixel_type == uint(0)) return vec4(0, 1, 1, 0.2);
-    else if (pixel_type == uint(1)) return vec4(1, 1, 0, 1);
-    else if (pixel_type == uint(2)) return vec4(0.6, 0.3, 0.3, 1);
-    else return vec4(0.2, 0, 0.2, 1);
-}
-
-void fragment() {
-    //uint pixel_type = uint(texture(my_texture, UV).r);
-    uint pixel_type = uint(texture(my_texture, UV).r * 256.0 + 0.1);
-    COLOR = color_lookup(pixel_type);   
-    //COLOR = vec4(texture(my_texture, UV).r, 1, 1, 1);
-    //COLOR = vec4(1, 0, 1, 1);
-}"
-
-[sub_resource type="ShaderMaterial" id=2]
+[sub_resource type="ShaderMaterial" id=1]
 resource_local_to_scene = true
-shader = SubResource( 1 )
+shader = ExtResource( 2 )
 
-[sub_resource type="ImageTexture" id=3]
+[sub_resource type="ImageTexture" id=2]
 flags = 0
 flags = 0
 size = Vector2( 256, 256 )
 
 [node name="ImageChunk" type="Sprite"]
-material = SubResource( 2 )
-texture = SubResource( 3 )
+material = SubResource( 1 )
+texture = SubResource( 2 )
 script = ExtResource( 1 )

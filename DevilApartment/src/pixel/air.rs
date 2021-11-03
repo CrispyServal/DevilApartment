@@ -8,19 +8,16 @@ impl Pixel for Air {
         0
     }
 
-    fn need_simulate(&self) -> bool {
-        false
-    }
-
     fn is_empty(&self) -> bool {
         true
     }
 
-    fn step(
+    fn try_move_self(
         &mut self,
         _world_buffer: &crate::world_buffer::WorldBuffer,
         _self_x: usize,
         _self_y: usize,
-    ) {
+    ) -> Option<(usize, usize)> {
+        None
     }
 }

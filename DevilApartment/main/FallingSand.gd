@@ -70,7 +70,7 @@ func _on_MainCamera_update_camera_rect(rect: Rect2):
     var visible_row_max = int((rect.position.y + rect.size.y) / TEXTURE_SIZE) + 1
     var visible_col_max = int((rect.position.x + rect.size.x) / TEXTURE_SIZE) + 1
     image_updater.update_visible_range(visible_col_min, visible_col_max, visible_row_min, visible_row_max)
-    prints("rect: ", visible_row_min, visible_row_max, visible_col_min, visible_col_max)
+    #prints("rect: ", visible_row_min, visible_row_max, visible_col_min, visible_col_max)
 
 func draw_all():
     image_updater.draw_all(pixel_world, texture_grid)

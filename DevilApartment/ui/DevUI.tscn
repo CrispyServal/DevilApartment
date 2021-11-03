@@ -41,5 +41,16 @@ toggle_mode = true
 group = ExtResource( 3 )
 text = "Store"
 
+[node name="Button2" type="Button" parent="GridContainer"]
+margin_left = 208.0
+margin_right = 308.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 100, 100 )
+custom_fonts/font = ExtResource( 2 )
+toggle_mode = true
+group = ExtResource( 3 )
+text = "water"
+
 [connection signal="toggled" from="GridContainer/Button0" to="." method="_on_Button0_toggled"]
 [connection signal="toggled" from="GridContainer/Button1" to="." method="_on_Button1_toggled"]
+[connection signal="toggled" from="GridContainer/Button2" to="." method="_on_Button2_toggled"]

@@ -165,7 +165,7 @@ impl WorldBuffer {
     }
 
     pub fn set_pixel(&self, world_x: usize, world_y: usize, pixel: Box<dyn Pixel>) {
-        //println!("set {}, {} to {}", world_x, world_y, pixel.id);
+        println!("set {}, {} to {}", world_x, world_y, pixel.get_id());
         self.half_chunk_grid[world_y / HALF_CHUNK_SIZE][world_x / HALF_CHUNK_SIZE].set_pixel(
             world_x % HALF_CHUNK_SIZE,
             world_y % HALF_CHUNK_SIZE,
