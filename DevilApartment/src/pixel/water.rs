@@ -1,5 +1,4 @@
 use crate::world_buffer::WorldBuffer;
-use rand::prelude::*;
 
 use super::{FallingPixel, Pixel};
 use super::{DY_LUT, DY_LUT_LEN};
@@ -11,32 +10,10 @@ pub struct Water {
     dy_index: usize,
 }
 
-impl FallingPixel for Water {
-    fn get_dy(&self) -> usize {
-        DY_LUT[self.dy_index]
-    }
-
-    fn add_dy(&mut self) {
-        self.dy_index = (self.dy_index + 1).min(DY_LUT_LEN - 1);
-    }
-
-    fn reset_dy(&mut self) {
-        self.dy_index = 0;
-    }
-}
-
-impl Pixel for Water {
-    fn get_id(&self) -> u8 {
-        3
-    }
-
-    fn is_empty(&self) -> bool {
-        false
-    }
-
-    fn try_move_self(
+impl Water {
+    fn try_move_down(
         &mut self,
-        world_buffer: &crate::world_buffer::WorldBuffer,
+        world_buffer: &WorldBuffer,
         self_x: usize,
         self_y: usize,
     ) -> Option<(usize, usize)> {
@@ -63,43 +40,156 @@ impl Pixel for Water {
         if final_y != self_y {
             return Some((final_x, final_y));
         }
-        // try move horizontally
-        let move_left: bool = random();
-        let direction_x: i32 = if move_left { -1 } else { 1 };
-        let left_range = (self_x - (HORIZONTAL_MOVE_DISTANCE.min(self_x))..self_x).into_iter().rev().collect();
-        let right_range = (self_x + 1..self_x + HORIZONTAL_MOVE_DISTANCE).collect();
-        //println!("{:?}, {:?}", left_range, right_range);
-        let range_list: Vec<Vec<usize>> = if move_left {
-            vec![left_range, right_range]
+
+        None
+    }
+
+    fn try_move_horizontly(
+        &mut self,
+        world_buffer: &WorldBuffer,
+        self_x: usize,
+        self_y: usize,
+        is_left: bool,
+    ) -> Option<(usize, usize)> {
+        // 要防止来回跑，但是这样会堆成柱子。TODO: 实际需要防止左右跑，但是允许钻水左右跑
+        if is_left
+            && (!WorldBuffer::can_get_pixel(self_x + 1, self_y)
+                || (world_buffer.get_pixel(self_x + 1, self_y).get_id() != self.get_id()))
+        {
+            return None;
+        }
+        if !is_left
+            && (self_x == 0 || !WorldBuffer::can_get_pixel(self_x - 1, self_y)
+                || (world_buffer.get_pixel(self_x - 1, self_y).get_id() != self.get_id()))
+        {
+            return None;
+        }
+        let range = if is_left {
+            Self::make_range_to_left(self_x)
         } else {
-            vec![right_range, left_range]
+            Self::make_range_to_right(self_x)
         };
-        for range in range_list {
-            for xx in range {
-                if !WorldBuffer::can_get_pixel(xx, self_y) {
+
+        let mut is_in_water = false;
+        let mut final_x = self_x;
+        let mut final_y = self_y;
+        let mut yy = self_y;
+        for xx in range {
+            if !WorldBuffer::can_get_pixel(xx, yy) {
+                break;
+            }
+            let check_target = world_buffer.get_pixel(xx, yy);
+            if is_in_water {
+                if check_target.is_solid() {
                     break;
                 }
-                let check_target = world_buffer.get_pixel(xx, self_y);
-                if !check_target.is_empty() {
-                    final_x = ((xx as i32 - direction_x + self_x as i32) / 2) as usize;
-                    break;
-                }
-                if !WorldBuffer::can_get_pixel(xx, self_y + 1) {
-                    break;
-                }
-                let check_target = world_buffer.get_pixel(xx, self_y + 1);
                 if check_target.is_empty() {
+                    // 出水了，可换
+                    final_y = yy;
                     final_x = xx;
-                    final_y = self_y + 1;
-                    break; // 有空隙往下走
+                    break;
                 }
-                final_x = xx;
+            } else {
+                if !check_target.is_empty() {
+                    if WorldBuffer::can_get_pixel(xx, yy + 1)
+                        && world_buffer.get_pixel(xx, yy + 1).is_liquid()
+                    {
+                        is_in_water = true;
+                        yy += 1;
+                    }
+                } else {
+                    break;
+                }
             }
-            if final_x != self_x || final_y != self_y {
-                return Some((final_x, final_y));
+            if !is_in_water {
+                if !WorldBuffer::can_get_pixel(xx, yy + 1) {
+                    break;
+                }
+                let check_target = world_buffer.get_pixel(xx, yy + 1);
+                if !is_in_water && check_target.is_empty() {
+                    final_x = xx;
+                    final_y = yy + 1;
+                    break; // 有空隙往下一格结束
+                }
             }
+            final_x = xx;
+        }
+
+        if final_x != self_x || final_y != self_y {
+            return Some((final_x, final_y));
         }
 
         None
+    }
+
+    fn make_range_to_left(self_x: usize) -> Vec<usize> {
+        (self_x - (HORIZONTAL_MOVE_DISTANCE.min(self_x))..self_x)
+            .into_iter()
+            .rev()
+            .collect()
+    }
+
+    fn make_range_to_right(self_x: usize) -> Vec<usize> {
+        (self_x + 1..self_x + HORIZONTAL_MOVE_DISTANCE).collect()
+    }
+}
+
+impl FallingPixel for Water {
+    fn get_dy(&self) -> usize {
+        DY_LUT[self.dy_index]
+    }
+
+    fn add_dy(&mut self) {
+        self.dy_index = (self.dy_index + 1).min(DY_LUT_LEN - 1);
+    }
+
+    fn reset_dy(&mut self) {
+        self.dy_index = 0;
+    }
+}
+
+impl Pixel for Water {
+    fn get_id(&self) -> u8 {
+        3
+    }
+
+    fn is_empty(&self) -> bool {
+        false
+    }
+    fn is_liquid(&self) -> bool {
+        true
+    }
+    fn is_solid(&self) -> bool {
+        false
+    }
+
+    fn try_move_self(
+        &mut self,
+        world_buffer: &WorldBuffer,
+        self_x: usize,
+        self_y: usize,
+    ) -> Option<(usize, usize)> {
+        if let Some(final_pos) = self.try_move_down(world_buffer, self_x, self_y) {
+            return Some(final_pos);
+        }
+        // try move horizontally
+        let maybe_left_pos = self.try_move_horizontly(world_buffer, self_x, self_y, true);
+        let maybe_right_pos = self.try_move_horizontly(world_buffer, self_x, self_y, false);
+
+        if let Some(left_pos) = maybe_left_pos {
+            if let Some(right_pos) = maybe_right_pos {
+                let dx_left = self_x - left_pos.0;
+                let dx_right = right_pos.0 - self_x;
+                if dx_left < dx_right {
+                    Some(left_pos)
+                } else {
+                    Some(right_pos)
+                }
+            } else {
+                Some(left_pos)
+            }
+        } else {
+            maybe_right_pos
+        }
     }
 }

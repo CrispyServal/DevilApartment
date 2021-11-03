@@ -8,9 +8,9 @@ impl Pixel for Air {
         0
     }
 
-    fn is_empty(&self) -> bool {
-        true
-    }
+    fn is_empty(&self) -> bool { true }
+    fn is_liquid(&self) -> bool { false }
+    fn is_solid(&self) -> bool { false }
 
     fn try_move_self(
         &mut self,

@@ -15,6 +15,9 @@ pub trait Pixel: Send + Sync + Clone {
     fn get_id(&self) -> u8;
     /// 空的像素不阻挡其他像素、粒子运动
     fn is_empty(&self) -> bool;
+    /// 液体可以允许固体进入
+    fn is_liquid(&self) -> bool;
+    fn is_solid(&self) -> bool;
     fn try_move_self(&mut self, world_buffer: &WorldBuffer, self_x: usize, self_y: usize) -> Option<(usize, usize)>;
 }
 

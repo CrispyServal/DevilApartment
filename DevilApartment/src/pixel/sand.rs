@@ -27,9 +27,9 @@ impl Pixel for Sand {
         1
     }
 
-    fn is_empty(&self) -> bool {
-        false
-    }
+    fn is_empty(&self) -> bool { false }
+    fn is_liquid(&self) -> bool { false }
+    fn is_solid(&self) -> bool { true }
 
     fn try_move_self(
         &mut self,
