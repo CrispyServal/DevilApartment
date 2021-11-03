@@ -1,19 +1,19 @@
 use super::Pixel;
 
 #[derive(Copy, Clone)]
-pub struct Air;
+pub struct Stone;
 
-impl Pixel for Air {
+impl Pixel for Stone {
     fn get_id(&self) -> u8 {
-        0
+        2
+    }
+
+    fn is_empty(&self) -> bool {
+        false
     }
 
     fn need_simulate(&self) -> bool {
         false
-    }
-
-    fn is_empty(&self) -> bool {
-        true
     }
 
     fn step(

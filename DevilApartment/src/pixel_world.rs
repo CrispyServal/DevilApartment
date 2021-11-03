@@ -2,7 +2,7 @@ use crate::{consts::*, pixel::new_from_id};
 use gdnative::prelude::*;
 use rayon::prelude::*;
 
-use crate::{ChunkUpdater, Pixel, WorldBuffer};
+use crate::{ChunkUpdater, WorldBuffer};
 
 #[derive(NativeClass)]
 #[inherit(Reference)]

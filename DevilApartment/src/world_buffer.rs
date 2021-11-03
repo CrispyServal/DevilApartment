@@ -1,9 +1,11 @@
 use std::sync::Mutex;
 
+use dyn_clonable::dyn_clone;
+
 use crate::consts::*;
+use crate::pixel::default_pixel;
 use crate::Pixel;
 use crate::Range2d;
-use crate::pixel::default_pixel;
 
 pub struct HalfChunkInner {
     pub x: usize,
@@ -28,8 +30,8 @@ impl HalfChunkInner {
         }
     }
 
-    pub fn get_pixel(&self, x: usize, y: usize) -> &dyn Pixel {
-        self.data[y][x].as_ref()
+    pub fn get_pixel(&self, x: usize, y: usize) -> Box<dyn Pixel> {
+        dyn_clone::clone_box(&*self.data[y][x])
     }
 
     pub fn set_pixel(&mut self, x: usize, y: usize, pixel: Box<dyn Pixel>) {
@@ -42,7 +44,7 @@ pub struct HalfChunk {
 }
 
 impl HalfChunk {
-    pub fn get_pixel(&self, x: usize, y: usize) -> &dyn Pixel {
+    pub fn get_pixel(&self, x: usize, y: usize) -> Box<dyn Pixel> {
         self.data.lock().unwrap().get_pixel(x, y)
     }
 
@@ -95,6 +97,12 @@ pub struct WorldBuffer {
     chunk_grid: Vec<Vec<Chunk>>,
 }
 
+impl Default for WorldBuffer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WorldBuffer {
     pub fn new() -> Self {
         let mut hc_grid = Vec::with_capacity(HALF_CHUNK_COUNT_Y);
@@ -110,9 +118,9 @@ impl WorldBuffer {
         }
 
         let mut chunk_grid = Vec::with_capacity(CHUNK_COUNT_Y);
-        for y in 0..CHUNK_COUNT_Y {
+        for _y in 0..CHUNK_COUNT_Y {
             let mut chunk_row = Vec::with_capacity(CHUNK_COUNT_X);
-            for x in 0..CHUNK_COUNT_X {
+            for _x in 0..CHUNK_COUNT_X {
                 let chunk = Chunk {
                     data: Mutex::new(ChunkInner::default()),
                 };
@@ -137,7 +145,13 @@ impl WorldBuffer {
         self.chunk_grid[chunk_y][chunk_x].is_active()
     }
 
-    pub fn set_chunk_active_next(&self, chunk_x: usize, chunk_y: usize, x_in_chunk: usize, y_in_chunk: usize) {
+    pub fn set_chunk_active_next(
+        &self,
+        chunk_x: usize,
+        chunk_y: usize,
+        x_in_chunk: usize,
+        y_in_chunk: usize,
+    ) {
         self.chunk_grid[chunk_y][chunk_x].set_active_next(x_in_chunk, y_in_chunk);
     }
 
@@ -145,7 +159,7 @@ impl WorldBuffer {
         self.chunk_grid[chunk_y][chunk_x].get_active_range()
     }
 
-    pub fn get_pixel(&self, world_x: usize, world_y: usize) -> &dyn Pixel {
+    pub fn get_pixel(&self, world_x: usize, world_y: usize) -> Box<dyn Pixel> {
         self.half_chunk_grid[world_y / HALF_CHUNK_SIZE][world_x / HALF_CHUNK_SIZE]
             .get_pixel(world_x % HALF_CHUNK_SIZE, world_y % HALF_CHUNK_SIZE)
     }
@@ -162,5 +176,9 @@ impl WorldBuffer {
         let x_in_chunk = world_x % CHUNK_SIZE;
         let y_in_chunk = world_y % CHUNK_SIZE;
         self.set_chunk_active_next(chunk_x, chunk_y, x_in_chunk, y_in_chunk);
+    }
+
+    pub fn can_get_pixel(world_x: usize, world_y: usize) -> bool {
+        world_x < WORLD_WIDTH && world_y < WORLD_HEIGHT
     }
 }

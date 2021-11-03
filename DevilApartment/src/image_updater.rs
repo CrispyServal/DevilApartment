@@ -2,7 +2,6 @@ use crate::consts::*;
 use crate::Range2d;
 use crate::{ImageChunk, PixelWorld};
 use gdnative::prelude::*;
-use rayon::prelude::*;
 
 #[derive(NativeClass)]
 #[inherit(Reference)]

@@ -8,6 +8,11 @@ pub struct Range2d {
 
 impl Range2d {
     pub fn new(min_x: usize, max_x: usize, min_y: usize, max_y: usize) -> Self {
-        Self { min_x, max_x, min_y, max_y}
+        Self {
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+        }
     }
 }
