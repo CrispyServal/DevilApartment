@@ -16,7 +16,7 @@ function MainCamera:_process(delta)
     local camera_pos = self:get_position()
     local zoom = self:get_zoom()
     local offset = delta * 100 * zoom:length()
-    local rect_changed = false
+    local rect_changed = true
     if Input:is_action_pressed("move_left") then
         self:set_position(Vector2(camera_pos.x - offset, camera_pos.y))
         rect_changed = true

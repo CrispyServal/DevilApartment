@@ -46,11 +46,11 @@ impl ImageUpdater {
         for y in self.range.min_y..self.range.max_y {
             for x in self.range.min_x..self.range.max_x {
                 if y >= image_grid.len() {
-                    return;
+                    continue;
                 }
                 let image_row = &image_grid[y];
                 if x >= image_row.len() {
-                    return;
+                    continue;
                 }
                 let world_x = x * TEXTURE_SIZE;
                 let world_y = y * TEXTURE_SIZE;

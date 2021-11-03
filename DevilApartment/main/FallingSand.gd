@@ -29,11 +29,6 @@ func init_thread_pool(n: int):
     for _i in range(n):
         var thread = Thread.new()
         thread_pool.append(thread)
-
-#func init_chunks():
-    #init_world()
-    #init_chunk_updaters()
-    #init_textures()
     
 var pixel_world
 func init_world():
@@ -75,25 +70,10 @@ func _on_MainCamera_update_camera_rect(rect: Rect2):
     var visible_row_max = int((rect.position.y + rect.size.y) / TEXTURE_SIZE) + 1
     var visible_col_max = int((rect.position.x + rect.size.x) / TEXTURE_SIZE) + 1
     image_updater.update_visible_range(visible_col_min, visible_col_max, visible_row_min, visible_row_max)
-    #prints("rect: ", visible_row_min, visible_row_max, visible_col_min, visible_col_max)
+    prints("rect: ", visible_row_min, visible_row_max, visible_col_min, visible_col_max)
 
 func draw_all():
     image_updater.draw_all(pixel_world, texture_grid)
-    #for y in range(visible_row_min, visible_row_max):
-     #   for x in range(visible_col_min, visible_col_max):
-      #      if y < 0 or y >= texture_grid.size():
-       #         return
-        #    var texture_row_array = texture_grid[y]
-         #   if x < 0 or x >= texture_row_array.size():
-          #      return
-           # var t = texture_row_array[x]
-            #var world_x = x * TEXTURE_SIZE
-            #var world_y = y * TEXTURE_SIZE
-            #for yy in range(CHUNK_PER_TEXTURE):
-            #    for xx in range(CHUNK_PER_TEXTURE):
-             #       pass
-              #      if pixel_world.is_chunk_active(x * CHUNK_PER_TEXTURE + xx, y * CHUNK_PER_TEXTURE + yy):
-               #         t.update_image(pixel_world, world_x, world_y, xx * CHUNK_SIZE, yy * CHUNK_SIZE)
 
 var add_queue: Array = []
 func _on_DevUI_dev_add_pixel(x, y, p):
@@ -108,9 +88,5 @@ func handle_debug_input():
         var ix = int(add_op["x"])
         var iy = int(add_op["y"])
         var p = int(add_op["p"])
-        #var updater: ChunkUpdater = chunk_updaters[iy / CHUNK_SIZE][ix / CHUNK_SIZE]
-        #var hc: HalfChunk = half_chunk_grid[iy / HALF_CHUNK_SIZE][ix / HALF_CHUNK_SIZE]
-        #updater.set_pixel(ix, iy, p)
-        #world_buffer.set_pixel(ix, iy, p)
         pixel_world.user_set_pixel(ix, iy, p)
     add_queue = []
