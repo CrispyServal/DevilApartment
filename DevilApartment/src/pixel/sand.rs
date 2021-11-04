@@ -1,4 +1,4 @@
-use crate::world_buffer::WorldBuffer;
+use crate::{UVec2, WorldBuffer};
 
 use super::{FallingPixel, Pixel};
 use super::{DY_LUT, DY_LUT_LEN};
@@ -27,16 +27,22 @@ impl Pixel for Sand {
         1
     }
 
-    fn is_empty(&self) -> bool { false }
-    fn is_liquid(&self) -> bool { false }
-    fn is_solid(&self) -> bool { true }
+    fn is_empty(&self) -> bool {
+        false
+    }
+    fn is_liquid(&self) -> bool {
+        false
+    }
+    fn is_solid(&self) -> bool {
+        true
+    }
 
     fn try_move_self(
         &mut self,
         world_buffer: &crate::world_buffer::WorldBuffer,
         self_x: usize,
         self_y: usize,
-    )  -> Option<(usize, usize)> {
+    ) -> Option<UVec2> {
         let dy = self.get_dy();
         let mut x_check = vec![self_x];
         let mut final_x = self_x;
@@ -66,7 +72,7 @@ impl Pixel for Sand {
                 self.add_dy();
             }
             if final_y != self_y {
-                return Some((final_x, final_y));
+                return Some(UVec2::new(final_x, final_y));
             }
         }
         None

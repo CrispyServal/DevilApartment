@@ -1,4 +1,4 @@
-use crate::world_buffer::WorldBuffer;
+use crate::{UVec2, WorldBuffer};
 
 use super::{FallingPixel, Pixel};
 use super::{DY_LUT, DY_LUT_LEN};
@@ -16,12 +16,11 @@ impl Water {
         world_buffer: &WorldBuffer,
         self_x: usize,
         self_y: usize,
-    ) -> Option<(usize, usize)> {
+    ) -> Option<UVec2> {
         let dy = self.get_dy();
         let mut is_stop = false;
-        let mut final_x = self_x;
-        let mut final_y = self_y;
         // try move down
+        let mut final_y = self_y;
         for yy in self_y + 1..self_y + dy + 1 {
             if !WorldBuffer::can_get_pixel(self_x, yy) {
                 is_stop = true;
@@ -38,7 +37,7 @@ impl Water {
             self.add_dy();
         }
         if final_y != self_y {
-            return Some((final_x, final_y));
+            return Some(UVec2::new(self_x, final_y));
         }
 
         None
@@ -50,20 +49,7 @@ impl Water {
         self_x: usize,
         self_y: usize,
         is_left: bool,
-    ) -> Option<(usize, usize)> {
-        // 要防止来回跑，但是这样会堆成柱子。TODO: 实际需要防止左右跑，但是允许钻水左右跑
-        if is_left
-            && (!WorldBuffer::can_get_pixel(self_x + 1, self_y)
-                || (world_buffer.get_pixel(self_x + 1, self_y).get_id() != self.get_id()))
-        {
-            return None;
-        }
-        if !is_left
-            && (self_x == 0 || !WorldBuffer::can_get_pixel(self_x - 1, self_y)
-                || (world_buffer.get_pixel(self_x - 1, self_y).get_id() != self.get_id()))
-        {
-            return None;
-        }
+    ) -> Option<UVec2> {
         let range = if is_left {
             Self::make_range_to_left(self_x)
         } else {
@@ -71,8 +57,6 @@ impl Water {
         };
 
         let mut is_in_water = false;
-        let mut final_x = self_x;
-        let mut final_y = self_y;
         let mut yy = self_y;
         for xx in range {
             if !WorldBuffer::can_get_pixel(xx, yy) {
@@ -85,9 +69,7 @@ impl Water {
                 }
                 if check_target.is_empty() {
                     // 出水了，可换
-                    final_y = yy;
-                    final_x = xx;
-                    break;
+                    return Some(UVec2::new(xx, yy));
                 }
             } else {
                 if !check_target.is_empty() {
@@ -98,25 +80,19 @@ impl Water {
                         yy += 1;
                     }
                 } else {
-                    break;
+                    // 不在水中，直接撞墙
+                    return None;
                 }
             }
             if !is_in_water {
                 if !WorldBuffer::can_get_pixel(xx, yy + 1) {
                     break;
                 }
-                let check_target = world_buffer.get_pixel(xx, yy + 1);
-                if !is_in_water && check_target.is_empty() {
-                    final_x = xx;
-                    final_y = yy + 1;
-                    break; // 有空隙往下一格结束
+                let check_target_down = world_buffer.get_pixel(xx, yy + 1);
+                if !is_in_water && check_target.is_empty() && check_target_down.is_empty() {
+                    return Some(UVec2::new(xx, yy));
                 }
             }
-            final_x = xx;
-        }
-
-        if final_x != self_x || final_y != self_y {
-            return Some((final_x, final_y));
         }
 
         None
@@ -168,7 +144,7 @@ impl Pixel for Water {
         world_buffer: &WorldBuffer,
         self_x: usize,
         self_y: usize,
-    ) -> Option<(usize, usize)> {
+    ) -> Option<UVec2> {
         if let Some(final_pos) = self.try_move_down(world_buffer, self_x, self_y) {
             return Some(final_pos);
         }
@@ -178,8 +154,8 @@ impl Pixel for Water {
 
         if let Some(left_pos) = maybe_left_pos {
             if let Some(right_pos) = maybe_right_pos {
-                let dx_left = self_x - left_pos.0;
-                let dx_right = right_pos.0 - self_x;
+                let dx_left = self_x - left_pos.x;
+                let dx_right = right_pos.x - self_x;
                 if dx_left < dx_right {
                     Some(left_pos)
                 } else {

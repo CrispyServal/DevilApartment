@@ -7,6 +7,7 @@ mod image_updater;
 mod pixel;
 mod pixel_world;
 mod range2d;
+mod uvec2;
 mod world_buffer;
 
 use chunk_updater::ChunkUpdater;
@@ -14,6 +15,7 @@ use image_chunk::ImageChunk;
 use pixel::Pixel;
 use pixel_world::PixelWorld;
 use range2d::Range2d;
+use uvec2::UVec2;
 use world_buffer::WorldBuffer;
 
 fn init(handle: InitHandle) {

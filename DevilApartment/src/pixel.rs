@@ -9,6 +9,7 @@ use common_dy::*;
 use dyn_clonable::*;
 
 use crate::world_buffer::WorldBuffer;
+use crate::UVec2;
 
 #[clonable]
 pub trait Pixel: Send + Sync + Clone {
@@ -18,7 +19,12 @@ pub trait Pixel: Send + Sync + Clone {
     /// 液体可以允许固体进入
     fn is_liquid(&self) -> bool;
     fn is_solid(&self) -> bool;
-    fn try_move_self(&mut self, world_buffer: &WorldBuffer, self_x: usize, self_y: usize) -> Option<(usize, usize)>;
+    fn try_move_self(
+        &mut self,
+        world_buffer: &WorldBuffer,
+        self_x: usize,
+        self_y: usize,
+    ) -> Option<UVec2>;
 }
 
 /// 会掉落的像素，
