@@ -46,27 +46,34 @@ impl Pixel for Sand {
         let dy = self.get_dy();
         let mut x_check = vec![self_x];
         let mut final_x = self_x;
-        if self_x > 0 && world_buffer.get_pixel(self_x - 1, self_y).is_empty() {
+        if self_x > 0 && !world_buffer.get_pixel(self_x - 1, self_y).is_solid() {
             x_check.push(self_x - 1);
         }
-        if world_buffer.get_pixel(self_x + 1, self_y).is_empty() {
+        if !world_buffer.get_pixel(self_x + 1, self_y).is_solid() {
             x_check.push(self_x + 1);
         }
         for xx in x_check.into_iter() {
             final_x = xx;
             let mut is_stop = false;
             let mut final_y = self_y;
+            let mut is_in_liquid = false;
             for yy in self_y + 1..self_y + dy + 1 {
                 if !WorldBuffer::can_get_pixel(xx, yy) {
                     is_stop = true;
                     break;
                 }
                 let check_target = world_buffer.get_pixel(xx, yy);
-                if !check_target.is_empty() {
+                if check_target.is_solid() {
                     is_stop = true;
                     break;
                 }
+                if check_target.is_liquid() {
+                    is_in_liquid = true;
+                }
                 final_y = yy;
+                if is_in_liquid && (yy - self_y) > dy / 8 {
+                    break;
+                }
             }
             if !is_stop {
                 self.add_dy();
