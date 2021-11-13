@@ -21,6 +21,7 @@ impl ChunkUpdater {
     pub fn simulate(&self, world_buffer: &WorldBuffer) {
         let active_range = world_buffer.get_chunk_active_range(self.chunk_x, self.chunk_y);
         if active_range.max_x > active_range.min_x && active_range.max_y > active_range.min_y {
+            /*
             println!(
                 "chunk: {}, {} active range: {}, {}, {}, {}",
                 self.chunk_x,
@@ -29,7 +30,7 @@ impl ChunkUpdater {
                 active_range.max_x,
                 active_range.min_y,
                 active_range.max_y
-            )
+            ) */
         }
         for world_y in
             (self.start_world_y + active_range.min_y..self.start_world_y + active_range.max_y).rev()

@@ -12,4 +12,18 @@ impl UVec2 {
     pub fn same(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y
     }
+
+    pub fn move_left(&self) -> Self {
+        Self {
+            x: self.x - 1,
+            y: self.y,
+        }
+    }
+
+    pub fn move_right(&self) -> Self {
+        Self {
+            x: self.x + 1,
+            y: self.y,
+        }
+    }
 }

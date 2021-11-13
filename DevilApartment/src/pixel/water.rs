@@ -1,13 +1,107 @@
-use crate::{UVec2, WorldBuffer};
+use crate::{HDirection, UVec2, WorldBuffer};
 
 use super::{FallingPixel, Pixel};
 use super::{DY_LUT, DY_LUT_LEN};
 
 const HORIZONTAL_MOVE_DISTANCE: usize = 32;
 
+#[derive(Copy, Clone)]
+/// 只要有方向，水每帧就会尝试往方向走，LR方向会先左右一起尝试，找到最成功的路径。
+/// 成功指：假设有向下的机会，则选择最短的；假设一直平着走，则选择最长的。
+enum WaterDirection {
+    None,
+    LR,
+    Left,
+    Right,
+}
+
+impl WaterDirection {
+    pub fn is_none(&self) -> bool {
+        match self {
+            Self::None => true,
+            _ => false,
+        }
+    }
+
+    pub fn from_hdirection(direction: HDirection) -> Self {
+        match direction {
+            HDirection::Left => Self::Left,
+            HDirection::Right => Self::Right,
+        }
+    }
+}
+
+impl Default for WaterDirection {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 #[derive(Copy, Clone, Default)]
 pub struct Water {
     dy_index: usize,
+    direction: WaterDirection,
+}
+
+struct WaterHIter<'w> {
+    pos: UVec2,
+    remain_distance: usize,
+    direction: HDirection,
+    world_buffer: &'w WorldBuffer,
+    died: bool,
+}
+
+impl<'w> WaterHIter<'w> {
+    pub fn new(
+        pos: UVec2,
+        direction: HDirection,
+        world_buffer: &'w WorldBuffer,
+        left_distance: usize,
+    ) -> Self {
+        Self {
+            pos,
+            remain_distance: left_distance,
+            direction,
+            world_buffer,
+            died: false,
+        }
+    }
+}
+
+impl<'w> Iterator for WaterHIter<'w> {
+    type Item = ();
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.remain_distance == 0 {
+            return None;
+        }
+        let pos_check = match self.direction {
+            HDirection::Left => self.pos.move_left(),
+            HDirection::Right => self.pos.move_right(),
+        };
+        if !WorldBuffer::can_get_pixel(pos_check.x, pos_check.y) {
+            self.died = true;
+            return None;
+        }
+        let pixel_check = self.world_buffer.get_pixel(pos_check.x, pos_check.y);
+        if !pixel_check.is_empty() {
+            self.died = true;
+            return None;
+        }
+
+        if WorldBuffer::can_get_pixel(pos_check.x, pos_check.y + 1)
+            && self
+                .world_buffer
+                .get_pixel(pos_check.x, pos_check.y + 1)
+                .is_empty()
+        {
+            self.pos = pos_check;
+            return None;
+        }
+
+        self.pos = pos_check;
+        self.remain_distance -= 1;
+        Some(())
+    }
 }
 
 impl Water {
@@ -38,61 +132,6 @@ impl Water {
         }
         if final_y != self_y {
             return Some(UVec2::new(self_x, final_y));
-        }
-
-        None
-    }
-
-    fn try_move_horizontly(
-        &mut self,
-        world_buffer: &WorldBuffer,
-        self_x: usize,
-        self_y: usize,
-        is_left: bool,
-    ) -> Option<UVec2> {
-        let range = if is_left {
-            Self::make_range_to_left(self_x)
-        } else {
-            Self::make_range_to_right(self_x)
-        };
-
-        let mut is_in_water = false;
-        let mut yy = self_y;
-        for xx in range {
-            if !WorldBuffer::can_get_pixel(xx, yy) {
-                break;
-            }
-            let check_target = world_buffer.get_pixel(xx, yy);
-            if is_in_water {
-                if check_target.is_solid() {
-                    break;
-                }
-                if check_target.is_empty() {
-                    // 出水了，可换
-                    return Some(UVec2::new(xx, yy));
-                }
-            } else {
-                if !check_target.is_empty() {
-                    if WorldBuffer::can_get_pixel(xx, yy + 1)
-                        && world_buffer.get_pixel(xx, yy + 1).is_liquid()
-                    {
-                        is_in_water = true;
-                        yy += 1;
-                    }
-                } else {
-                    // 不在水中，直接撞墙
-                    return None;
-                }
-            }
-            if !is_in_water {
-                if !WorldBuffer::can_get_pixel(xx, yy + 1) {
-                    break;
-                }
-                let check_target_down = world_buffer.get_pixel(xx, yy + 1);
-                if !is_in_water && check_target.is_empty() && check_target_down.is_empty() {
-                    return Some(UVec2::new(xx, yy));
-                }
-            }
         }
 
         None
@@ -146,26 +185,80 @@ impl Pixel for Water {
         self_y: usize,
     ) -> Option<UVec2> {
         if let Some(final_pos) = self.try_move_down(world_buffer, self_x, self_y) {
+            self.direction = WaterDirection::LR;
             return Some(final_pos);
         }
-        // try move horizontally
-        let maybe_left_pos = self.try_move_horizontly(world_buffer, self_x, self_y, true);
-        let maybe_right_pos = self.try_move_horizontly(world_buffer, self_x, self_y, false);
 
-        if let Some(left_pos) = maybe_left_pos {
-            if let Some(right_pos) = maybe_right_pos {
-                let dx_left = self_x - left_pos.x;
-                let dx_right = right_pos.x - self_x;
-                if dx_left < dx_right {
-                    Some(left_pos)
-                } else {
-                    Some(right_pos)
-                }
-            } else {
-                Some(left_pos)
+        let mut iters = [None, None];
+        match self.direction {
+            WaterDirection::None => {
+                return None;
             }
-        } else {
-            maybe_right_pos
+            WaterDirection::LR => {
+                let iter_left = WaterHIter::new(
+                    UVec2::new(self_x, self_y),
+                    HDirection::Left,
+                    world_buffer,
+                    HORIZONTAL_MOVE_DISTANCE,
+                );
+                let iter_right = WaterHIter::new(
+                    UVec2::new(self_x, self_y),
+                    HDirection::Right,
+                    world_buffer,
+                    HORIZONTAL_MOVE_DISTANCE,
+                );
+                iters[0] = Some(iter_left);
+                iters[1] = Some(iter_right);
+            }
+            WaterDirection::Left => {
+                let iter_left = WaterHIter::new(
+                    UVec2::new(self_x, self_y),
+                    HDirection::Left,
+                    world_buffer,
+                    HORIZONTAL_MOVE_DISTANCE,
+                );
+                iters[0] = Some(iter_left);
+            }
+            WaterDirection::Right => {
+                let iter_right = WaterHIter::new(
+                    UVec2::new(self_x, self_y),
+                    HDirection::Right,
+                    world_buffer,
+                    HORIZONTAL_MOVE_DISTANCE,
+                );
+                iters[1] = Some(iter_right);
+            }
+        }
+        // try move horizontally
+
+        let mut last_pos = None;
+        loop {
+            let mut have_iter_alive = false;
+            for maybe_iter in iters.iter_mut() {
+                if let Some(iter) = maybe_iter {
+                    have_iter_alive = true;
+                    let iter_result = iter.next();
+                    if iter_result.is_none() {
+                        if !iter.died {
+                            self.direction = WaterDirection::from_hdirection(iter.direction);
+                            return Some(iter.pos);
+                        } else {
+                            if iter.remain_distance == 0 {
+                                self.direction = WaterDirection::None;
+                            }
+                            else {
+                                self.direction = WaterDirection::from_hdirection(iter.direction);
+                            }
+                            last_pos = Some(iter.pos);
+                            *maybe_iter = None;
+                        }
+                    }
+                }
+            }
+
+            if !have_iter_alive {
+                return last_pos;
+            }
         }
     }
 }

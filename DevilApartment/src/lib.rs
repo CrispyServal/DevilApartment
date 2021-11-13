@@ -2,6 +2,7 @@ use gdnative::prelude::*;
 
 mod chunk_updater;
 mod consts;
+mod direction;
 mod image_chunk;
 mod image_updater;
 mod pixel;
@@ -11,6 +12,7 @@ mod uvec2;
 mod world_buffer;
 
 use chunk_updater::ChunkUpdater;
+use direction::{Direction, HDirection};
 use image_chunk::ImageChunk;
 use pixel::Pixel;
 use pixel_world::PixelWorld;
