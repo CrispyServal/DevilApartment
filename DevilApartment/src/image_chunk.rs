@@ -60,7 +60,7 @@ impl ImageChunk {
                 image.set_pixel(
                     x as i64,
                     y as i64,
-                    Color::rgb((id as f32) / 255f32, 0f32, 0f32),
+                    Color::from_rgb((id as f32) / 255f32, 0f32, 0f32),
                 );
             }
         }

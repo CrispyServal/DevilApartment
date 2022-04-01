@@ -7,7 +7,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-gdnative = "0.9.3"
+gdnative = "0.10"
+#gdnative = {git = "https://github.com/godot-rust/godot-rust"}
 rayon = "1.5.1"
 dyn-clonable = "0.9.0"
 rand = "0.8.0"
