@@ -114,13 +114,81 @@ local function marching_square(image)
     return lines
 end
 
+-- 先把lines展平成数组
+-- 每个元素是一条线，需要标明起始和结束
+local function segment(from_x, from_y, to_x, to_y)
+    return {
+        from = {x = from_x, y = from_y},
+        to = {x = to_x, y = to_y},
+    }
+end
+
+local function flatten_lines(lines)
+    local flat_lines = {}
+    for _, lines_row in ipairs(lines) do
+        for _, line in ipairs(lines_row) do
+            if line.line then
+                for i = 1, #line.line / 2 do
+                    local from = line.line[i]
+                    local to = line.line[i + 1]
+                    table.insert(flat_lines, segment(line.u + from.x, line.v + from.y, line.u + to.x, line.v + to.y))
+                end
+            end
+        end
+    end
+    return flat_lines
+end
+
+-- 需要输出连成线的点集
+-- 输入是之前的self.lines
+-- 先假设只有一条线，即没有空洞
+local function connect(lines)
+    local points = {}
+    if #lines == 0 then
+        return points
+    end
+    local line0 = table.remove(lines)
+    table.insert(points, line0.from)
+    print(string.format("added (%d, %d)", line0.from.x, line0.from.y))
+    table.insert(points, line0.to)
+    print(string.format("added (%d, %d)", line0.to.x, line0.to.y))
+    while #lines > 0 do
+        local current = points[#points]
+        local found = false
+        for i = #lines, 1, -1 do
+            local line = lines[i]
+            if line.from.x == current.x and line.from.y == current.y then
+                table.insert(points, line.to)
+                print(string.format("added (%d, %d)", line.to.x, line.to.y))
+                table.remove(lines, i)
+                found = true
+                break
+            end
+            -- 方向可逆
+            if line.to.x == current.x and line.to.y == current.y then
+                table.insert(points, line.from)
+                print(string.format("added (%d, %d)", line.from.x, line.from.y))
+                table.remove(lines, i)
+                found = true
+                break
+            end
+
+        end
+        assert(found, string.format("current is (%d, %d)", current.x, current.y))
+    end
+    return points
+end
 
 function TestMarchingSquare:_ready()
     self.sprite = self:get_node("Sprite")
     local image = self.sprite:get_texture():get_data()
     self.sprite:set_position(image:get_size() / 2)
     local lines = marching_square(image)
-    self.lines = lines
+    self.lines = flatten_lines(lines)
+
+    local points = connect(self.lines)
+    self.points = points
+    --self.lines = lines
     self:update()
 end
 
@@ -129,21 +197,28 @@ function TestMarchingSquare:draw_lines()
         return
     end
     print("draw")
-    for _, lines_row in ipairs(self.lines) do
-        for _, line in ipairs(lines_row) do
-            if line.line then
-                for i = 1, #line.line / 2 do
-                    local from = line.line[i]
-                    local to = line.line[i + 1]
-                    self:draw_line(Vector2(line.u + from.x, line.v + from.y), Vector2(line.u + to.x, line.v + to.y), Color(1, 0, 0))
-                end
-            end
-        end
+    for _, line in ipairs(self.lines) do
+        self:draw_line(Vector2(line.from.x, line.from.y), Vector2(line.to.x, line.to.y), Color(1, 0, 0))
     end
 end
 
+function TestMarchingSquare:draw_points()
+    if not self.points then
+        return
+    end
+    print("draw")
+    for i = 1, #self.points - 1 do
+        local from = self.points[i]
+        local to = self.points[i + 1]
+        self:draw_line(Vector2(from.x, from.y), Vector2(to.x, to.y), Color(1, 1, 0))
+    end
+end
+
+
+
 function TestMarchingSquare:_draw()
-    self:draw_lines()
+    --self:draw_lines()
+    self:draw_points()
 end
 
 
