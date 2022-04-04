@@ -139,6 +139,19 @@ local function flatten_lines(lines)
     return flat_lines
 end
 
+local MIN = 0.0001
+local function same_number(x1, x2)
+    return math.abs(x1 - x2) < MIN
+end
+
+local function same_point(p1, p2)
+    return same_number(p1.x, p2.x) and same_number(p1.y, p2.y)
+end
+
+local function format_point(p)
+    return string.format("(%s, %s)", p.x, p.y)
+end
+
 -- 需要输出连成线的点集
 -- 输入是之前的self.lines
 -- 先假设只有一条线，即没有空洞
@@ -149,26 +162,26 @@ local function connect(lines)
     end
     local line0 = table.remove(lines)
     table.insert(points, line0.from)
-    print(string.format("added (%d, %d)", line0.from.x, line0.from.y))
     table.insert(points, line0.to)
-    print(string.format("added (%d, %d)", line0.to.x, line0.to.y))
     while #lines > 0 do
         local current = points[#points]
         local found = false
         for i = #lines, 1, -1 do
             local line = lines[i]
             if line.from.x == current.x and line.from.y == current.y then
-                table.insert(points, line.to)
-                print(string.format("added (%d, %d)", line.to.x, line.to.y))
-                table.remove(lines, i)
+                if not same_point(current, line.to) then
+                    table.insert(points, line.to)
+                    table.remove(lines, i)
+                end
                 found = true
                 break
             end
             -- 方向可逆
             if line.to.x == current.x and line.to.y == current.y then
-                table.insert(points, line.from)
-                print(string.format("added (%d, %d)", line.from.x, line.from.y))
-                table.remove(lines, i)
+                if not same_point(current, line.from) then
+                    table.insert(points, line.from)
+                    table.remove(lines, i)
+                end
                 found = true
                 break
             end
@@ -177,6 +190,88 @@ local function connect(lines)
         assert(found, string.format("current is (%d, %d)", current.x, current.y))
     end
     return points
+end
+
+local function dot(v1, v2)
+    return v1.x * v2.x + v1.y * v2.y
+end
+
+local function mod(v)
+    return math.sqrt(dot(v, v))
+end
+
+local function perpendicular_distance(p, line_from, line_to)
+    local v_line = {
+        x = line_to.x - line_from.x,
+        y = line_to.y - line_from.y
+    }
+    -- 垂线
+    local v_line_p = {
+        x = - v_line.y,
+        y = v_line.x
+    }
+    local v_p = {
+        x = p.x - line_from.x,
+        y = p.y - line_from.y,
+    }
+    if (v_p.x == 0 and v_line_p.x == 0) or same_number( v_p.y / v_p.x, v_line_p.y / v_line_p.x) then
+        return 0
+    end
+    local dis = math.abs(dot(v_p, v_line_p)) / mod(v_line_p)
+    return dis
+end
+
+-- 从l到r的闭区间
+-- index从0开始算
+local function rdp(points, e, l, r)
+    -- print(string.format("lr: %s,%s", l, r))
+    local dmax = 0
+    local index = 0
+    assert(r > l)
+    if r - l <= 1 then
+        return {
+            points[l],
+            points[r],
+        }
+    end
+    -- 跳过起始点
+    for i = l + 1, r - 1 do
+        local d = perpendicular_distance(points[i], points[l], points[r])
+        --[[ print(string.format(
+            "dis from %s to [%s, %s] is %s",
+            format_point(points[i]),
+            format_point(points[l]),
+            format_point(points[r]),
+            d
+        ))]]
+        if d > dmax then
+            index = i
+            dmax = d
+        end
+    end
+    if dmax > e then
+        local rec1 = rdp(points, e, l, index)
+        local rec2 = rdp(points, e, index, r)
+
+        local result = {}
+        for i = 1, #rec1 - 1 do -- -1是去掉index这个点？
+            table.insert(result, rec1[i])
+        end
+        for i = 1, #rec2 do
+            table.insert(result, rec2[i])
+        end
+        print(string.format("lr: %s,%s, d = %s, index = %s", l, r, dmax, index))
+        print_r(result)
+        return result
+    else
+        print(string.format("lr: %s,%s, d = %s, index = %s", l, r, dmax, index))
+        print_r({
+            points[l], points[r]
+        })
+        return {
+            points[l], points[r]
+        }
+    end
 end
 
 function TestMarchingSquare:_ready()
@@ -189,6 +284,23 @@ function TestMarchingSquare:_ready()
     local points = connect(self.lines)
     self.points = points
     --self.lines = lines
+
+    --[[ debug
+    local ps = {}
+    for i = 1, 100 do
+        table.insert(ps, {
+            x = i,
+            y = math.random() * 20
+        })
+    end
+
+    self.points = ps
+    ]]
+
+    --print_r(self.points)
+    self.simple_points = rdp(self.points, 0.8, 1, #self.points - 1)
+    table.insert(self.simple_points, self.points[#self.points])
+    -- print_r(self.simple_points)
     self:update()
 end
 
@@ -202,24 +314,41 @@ function TestMarchingSquare:draw_lines()
     end
 end
 
-function TestMarchingSquare:draw_points()
-    if not self.points then
+function TestMarchingSquare:draw_points_inner(points, color, offset)
+    if not points then
         return
     end
     print("draw")
-    for i = 1, #self.points - 1 do
-        local from = self.points[i]
-        local to = self.points[i + 1]
-        self:draw_line(Vector2(from.x, from.y), Vector2(to.x, to.y), Color(1, 1, 0))
+    for i = 1, #points - 1 do
+        local from = points[i]
+        local to = points[i + 1]
+        self:draw_line(Vector2(from.x, from.y + offset), Vector2(to.x, to.y + offset), color)
     end
+
 end
 
+function TestMarchingSquare:draw_points()
+    self:draw_points_inner(self.points, Color(0, 1, 0), 0)
+end
+
+function TestMarchingSquare:draw_simple_points()
+    self:draw_points_inner(self.simple_points, Color(1, 0, 0), 0)
+end
 
 
 function TestMarchingSquare:_draw()
     --self:draw_lines()
     self:draw_points()
+    self:draw_simple_points()
 end
+
+function TestMarchingSquare:_input(event)
+    if event:is_class("InputEventMouseMotion") then
+        local mouse_pos = self:get_global_mouse_position()
+        self:get_node("Control/Label"):set_text(format_point(mouse_pos))
+    end
+end
+
 
 
 
